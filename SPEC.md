@@ -218,8 +218,8 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 
 **Fase 1 — MVP via texto (`!voto N`)**
   1. Resolve o `Player` pelo nome (mesmo matching do `!remover`).
-  2. Cria um registro em `VotacaoAtiva` com `expiraEm = now + 10min`.
-  3. Publica no grupo: `Vote de 1 a 5 estrelas para {nome} respondendo "!voto N" até {hora}`.
+  2. Cria um registro em `VotacaoAtiva` com `expiraEm = now + 3 dias`.
+  3. Publica no grupo: `Vote de 1 a 5 estrelas para {nome} respondendo "!voto N" até {data e hora}`.
   4. Enquanto a votação estiver ativa, o dispatcher intercepta mensagens `!voto N` de qualquer participante e grava uma `Avaliacao` (uma por avaliador por votação — usar chave de idempotência avaliador+avaliado+janela de tempo).
   5. Ao expirar (checado a cada novo evento recebido, ou via job agendado), marca `fechada = true` e publica o resultado consolidado.
 - **Validações**: `N` deve ser inteiro entre 1 e 5; um jogador não pode votar em si mesmo.

@@ -86,7 +86,7 @@ docker compose up -d --force-recreate backend
 
 ## Enquete nativa
 
-`!votacao Nome` envia uma enquete com as opções de 1 a 5 estrelas e seleção única. O bot persiste o ID e o `messageSecret` retornados. Atualizações que já tragam o nome da opção e atualizações binárias com o hash SHA-256 da opção são aceitas.
+`!votacao Nome` envia uma enquete com as opções de 1 a 5 estrelas, seleção única e duração de 3 dias. O bot persiste o ID e o `messageSecret` retornados. Atualizações que já tragam o nome da opção e atualizações binárias com o hash SHA-256 da opção são aceitas.
 
 Se a criação da enquete falhar ou a versão instalada não entregar uma opção decodificável em `MESSAGES_UPDATE`, os participantes ainda podem votar com `!voto N`. Um jogador não pode se autoavaliar nem manter mais de um voto na mesma votação.
 

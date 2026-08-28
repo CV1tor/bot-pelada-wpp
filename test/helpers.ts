@@ -16,7 +16,7 @@ export const votacao = (): Votacao => ({
   id: 'votacao-1',
   grupoJid: 'grupo@g.us',
   jogador: jogador(),
-  expiraEm: new Date('2026-08-28T13:10:00.000Z'),
+  expiraEm: new Date('2026-08-31T13:00:00.000Z'),
   fechada: false,
   pollMessageId: null,
   pollMessageSecret: null,

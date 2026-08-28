@@ -18,13 +18,13 @@ export class VotacaoCommand implements Comando {
     if (resultado.tipo === 'ja_existe') {
       return `⏳ Já existe uma votação ativa para ${resultado.votacao.jogador.nome}.`;
     }
-    const hora = resultado.votacao.expiraEm.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
+    const dataEHora = resultado.votacao.expiraEm.toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
       timeZone: 'America/Fortaleza',
     });
     return resultado.enqueteNativa
-      ? `🗳️ Enquete aberta para ${resultado.votacao.jogador.nome} até ${hora}. Se a enquete não funcionar, use !voto N.`
-      : `⚠️ A enquete nativa não ficou disponível. Vote de 1 a 5 em ${resultado.votacao.jogador.nome} com !voto N até ${hora}.`;
+      ? `🗳️ Enquete aberta para ${resultado.votacao.jogador.nome} até ${dataEHora}. Se a enquete não funcionar, use !voto N.`
+      : `⚠️ A enquete nativa não ficou disponível. Vote de 1 a 5 em ${resultado.votacao.jogador.nome} com !voto N até ${dataEHora}.`;
   }
 }

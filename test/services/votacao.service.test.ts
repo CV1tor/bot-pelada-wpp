@@ -38,6 +38,11 @@ describe('VotacaoService', () => {
       ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'],
       1,
     );
+    expect(votacoes.criar).toHaveBeenCalledWith(
+      'jogador-1',
+      'grupo@g.us',
+      new Date('2026-08-31T13:00:00.000Z'),
+    );
     expect(votacoes.vincularEnquete).toHaveBeenCalledWith('votacao-1', 'poll-1', 'segredo');
   });
 

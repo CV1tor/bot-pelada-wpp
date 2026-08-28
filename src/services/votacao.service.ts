@@ -20,6 +20,7 @@ export type ResultadoRegistroVoto =
   | { tipo: 'avaliador_desconhecido' };
 
 const OPCOES_ENQUETE = ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'];
+const DURACAO_VOTACAO_EM_MILISSEGUNDOS = 3 * 24 * 60 * 60 * 1000;
 
 export class VotacaoService {
   public constructor(
@@ -43,7 +44,7 @@ export class VotacaoService {
       };
     }
 
-    const expiraEm = new Date(this.agora().getTime() + 10 * 60 * 1000);
+    const expiraEm = new Date(this.agora().getTime() + DURACAO_VOTACAO_EM_MILISSEGUNDOS);
     const votacao = await this.repositorioVotacao.criar(resolucao.jogador.id, grupoJid, expiraEm);
     let enquete;
     try {
