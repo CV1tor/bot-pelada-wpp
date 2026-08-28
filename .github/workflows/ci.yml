@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validar:
+    name: Validar aplicação
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://user:password@localhost:5432/pelada
+
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v6
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Gerar cliente Prisma
+        run: pnpm prisma:generate
+
+      - name: Validar formatação
+        run: pnpm format:check
+
+      - name: Executar lint
+        run: pnpm lint
+
+      - name: Executar testes
+        run: pnpm test
+
+      - name: Compilar aplicação
+        run: pnpm build
+
+      - name: Validar schema Prisma
+        run: pnpm prisma validate
+
+      - name: Construir imagem Docker
+        run: docker build --tag bot-pelada:ci .

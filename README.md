@@ -1,5 +1,7 @@
 # Bot da Pelada de Vôlei
 
+[![CI](https://github.com/CV1tor/bot-pelada-wpp/actions/workflows/ci.yml/badge.svg)](https://github.com/CV1tor/bot-pelada-wpp/actions/workflows/ci.yml)
+
 Bot para gerenciar uma pelada de vôlei em um grupo do WhatsApp. O backend recebe os eventos da Evolution API, executa comandos, persiste os dados em PostgreSQL e responde no mesmo grupo.
 
 ## Funcionalidades
@@ -123,3 +125,25 @@ pnpm dev
 ```
 
 O endpoint `GET /health` retorna o estado básico do processo. O webhook está em `POST /webhook`.
+
+## Integração e entrega contínuas
+
+Pull requests direcionados para `main` executam formatação, lint, testes, build TypeScript, validação do schema Prisma e construção da imagem Docker.
+
+Depois do merge na `main`, o semantic-release analisa os Conventional Commits:
+
+- `fix:` incrementa a versão de correção;
+- `feat:` incrementa a versão menor;
+- `BREAKING CHANGE:` incrementa a versão maior;
+- commits como `docs:`, `test:` e `chore:` não geram versão isoladamente.
+
+Uma release válida cria a tag Git `vX.Y.Z`, publica a GitHub Release e envia a imagem para:
+
+```text
+ghcr.io/cv1tor/bot-pelada-wpp:X.Y.Z
+ghcr.io/cv1tor/bot-pelada-wpp:X.Y
+ghcr.io/cv1tor/bot-pelada-wpp:X
+ghcr.io/cv1tor/bot-pelada-wpp:latest
+```
+
+Os workflows usam somente o `GITHUB_TOKEN` criado automaticamente pelo GitHub. No repositório, mantenha a permissão de Actions em **Read and write permissions** ou permita explicitamente que workflows criem releases e publiquem pacotes.
