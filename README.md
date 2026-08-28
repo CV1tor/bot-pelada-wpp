@@ -90,6 +90,8 @@ docker compose up -d --force-recreate backend
 
 Se a criação da enquete falhar ou a versão instalada não entregar uma opção decodificável em `MESSAGES_UPDATE`, os participantes ainda podem votar com `!voto N`. Um jogador não pode se autoavaliar nem manter mais de um voto na mesma votação.
 
+O ranking reflete as avaliações persistidas e passa a exibir o jogador a partir do primeiro voto.
+
 ## Comandos
 
 Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece:

@@ -204,7 +204,7 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 - **Comportamento**: busca participante da sessão aberta cujo nome combina com o argumento. Se houver mais de um match, lista as opções e pede para o usuário ser mais específico.
 
 ### `!ranking`
-- **Descrição**: mostra os jogadores ordenados pela média de estrelas recebidas (mínimo de 3 avaliações para entrar no ranking, para evitar distorção).
+- **Descrição**: mostra os jogadores ordenados pela média de estrelas recebidas a partir da primeira avaliação.
 - **Resposta exemplo**:
   ```
   🏆 Ranking da pelada:

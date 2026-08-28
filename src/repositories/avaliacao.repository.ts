@@ -10,7 +10,7 @@ export interface RepositorioAvaliacao {
     permitirAtualizacao: boolean,
   ): Promise<boolean>;
   obterResultado(votacaoId: string): Promise<{ media: number | null; total: number }>;
-  listarRanking(minimoAvaliacoes: number): Promise<JogadorAvaliado[]>;
+  listarRanking(): Promise<JogadorAvaliado[]>;
 }
 
 export class RepositorioAvaliacaoPrisma implements RepositorioAvaliacao {
@@ -52,12 +52,11 @@ export class RepositorioAvaliacaoPrisma implements RepositorioAvaliacao {
     return { media: resultado._avg.estrelas, total: resultado._count.estrelas };
   }
 
-  public async listarRanking(minimoAvaliacoes: number): Promise<JogadorAvaliado[]> {
+  public async listarRanking(): Promise<JogadorAvaliado[]> {
     const agrupados = await this.prisma.avaliacao.groupBy({
       by: ['avaliadoId'],
       _avg: { estrelas: true },
       _count: { estrelas: true },
-      having: { estrelas: { _count: { gte: minimoAvaliacoes } } },
       orderBy: { _avg: { estrelas: 'desc' } },
     });
     const jogadores = await this.prisma.player.findMany({
