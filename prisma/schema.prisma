@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Player {
+  id          String   @id @default(uuid())
+  jid         String   @unique
+  nome        String
+  createdAt   DateTime @default(now())
+
+  participacoes      ListaParticipante[]
+  avaliacoesFeitas   Avaliacao[] @relation("avaliador")
+  avaliacoesRecebidas Avaliacao[] @relation("avaliado")
+  votacoes            VotacaoAtiva[]
+}
+
+model Sessao {
+  id          String        @id @default(uuid())
+  data        DateTime      @default(now())
+  status      StatusSessao @default(ABERTA)
+  chaveAberta String?       @unique @default("ATIVA")
+
+  participantes ListaParticipante[]
+  times         Time[]
+}
+
+enum StatusSessao {
+  ABERTA
+  FECHADA
+}
+
+model ListaParticipante {
+  id           String   @id @default(uuid())
+  sessaoId     String
+  playerId     String
+  confirmadoEm DateTime @default(now())
+
+  sessao Sessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([sessaoId, playerId])
+}
+
+model Avaliacao {
+  id          String   @id @default(uuid())
+  avaliadorId String
+  avaliadoId  String
+  votacaoId   String
+  estrelas    Int
+  createdAt   DateTime @default(now())
+
+  avaliador Player       @relation("avaliador", fields: [avaliadorId], references: [id], onDelete: Cascade)
+  avaliado  Player       @relation("avaliado", fields: [avaliadoId], references: [id], onDelete: Cascade)
+  votacao   VotacaoAtiva @relation(fields: [votacaoId], references: [id], onDelete: Cascade)
+
+  @@unique([votacaoId, avaliadorId])
+  @@index([avaliadoId])
+}
+
+model VotacaoAtiva {
+  id                String   @id @default(uuid())
+  playerId          String
+  grupoJid          String
+  iniciadaEm        DateTime @default(now())
+  expiraEm          DateTime
+  fechada           Boolean  @default(false)
+  pollMessageId     String?  @unique
+  pollMessageSecret String?
+
+  player     Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  avaliacoes Avaliacao[]
+
+  @@index([grupoJid, fechada, expiraEm])
+}
+
+model Time {
+  id        String   @id @default(uuid())
+  sessaoId  String
+  numero    Int
+  jogadores String[]
+
+  sessao Sessao @relation(fields: [sessaoId], references: [id], onDelete: Cascade)
+
+  @@unique([sessaoId, numero])
+}
