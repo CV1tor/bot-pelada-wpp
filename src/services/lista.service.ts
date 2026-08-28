@@ -34,6 +34,13 @@ export class ListaService {
     return this.adicionar(jid, jogadorExistente?.nome ?? jid.split('@')[0] ?? jid);
   }
 
+  public async adicionarAvulso(nome: string): Promise<ResultadoAdicao> {
+    const jogador = await this.repositorioJogador.salvarAvulso(nome);
+    const sessao = await this.repositorioSessao.obterOuCriarAberta();
+    const adicionado = await this.repositorioSessao.adicionarParticipante(sessao.id, jogador.id);
+    return { adicionado, jogador };
+  }
+
   public async remover(nome: string): Promise<ResultadoRemocao> {
     const sessao = await this.repositorioSessao.obterOuCriarAberta();
     const resolucao: ResultadoResolucaoJogador = resolverJogadorPorNome(sessao.participantes, nome);

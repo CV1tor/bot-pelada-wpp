@@ -33,6 +33,22 @@ describe('handlers de comandos', () => {
     await expect(new AdicionarCommand(servico).executar(contexto)).resolves.toContain('adicionado');
   });
 
+  it('!adicionar com nome inclui um participante avulso', async () => {
+    const adicionarAvulso = vi.fn().mockResolvedValue({
+      adicionado: true,
+      jogador: jogador('avulso', 'José da Silva', 'avulso:jose-da-silva'),
+    });
+    const servico = { adicionarAvulso } as unknown as ListaService;
+
+    await expect(
+      new AdicionarCommand(servico).executar({
+        ...contexto,
+        argumentos: ['José', 'da', 'Silva'],
+      }),
+    ).resolves.toContain('José da Silva foi adicionado');
+    expect(adicionarAvulso).toHaveBeenCalledWith('José da Silva');
+  });
+
   it('!limpar exige confirmação explícita', async () => {
     const servico = { limpar: vi.fn() } as unknown as ListaService;
     await expect(new LimparCommand(servico).executar(contexto)).resolves.toContain(

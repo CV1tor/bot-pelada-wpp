@@ -189,9 +189,9 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
   ```
 
 ### `!adicionar`
-- **Descrição**: adiciona o autor da mensagem (ou o contato mencionado) à lista atual.
-- **Args**: opcional — se vier `!adicionar @contato`, usa o contato mencionado; senão usa quem enviou a mensagem.
-- **Comportamento**: extrai o `jid` e `pushName` via payload da Evolution API, faz upsert do `Player`, cria `ListaParticipante` vinculado à sessão aberta. Se já estiver na lista, responde avisando duplicidade em vez de erro.
+- **Descrição**: adiciona o autor da mensagem, um contato mencionado ou um nome livre à lista atual.
+- **Args**: opcional — se vier `!adicionar @contato`, usa o contato mencionado; se vier `!adicionar Nome Livre`, cria um participante avulso; sem argumentos, usa quem enviou a mensagem.
+- **Comportamento**: extrai o `jid` e `pushName` via payload da Evolution API para contatos ou gera uma identidade interna estável para nomes livres, faz upsert do `Player` e cria `ListaParticipante` vinculado à sessão aberta. Se já estiver na lista, responde avisando duplicidade em vez de erro.
 
 ### `!limpar`
 - **Restrito a admin.**

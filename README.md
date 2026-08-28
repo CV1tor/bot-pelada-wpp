@@ -95,7 +95,7 @@ Se a criação da enquete falhar ou a versão instalada não entregar uma opçã
 Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece:
 
 - `!lista`
-- `!adicionar [@contato]`
+- `!adicionar [@contato | nome livre]`
 - `!remover nome`
 - `!limpar confirmar`
 - `!ranking`
@@ -106,6 +106,9 @@ Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece
 - `!ajuda`
 
 `!remover`, `!limpar` e `!sorteio` exigem administrador do grupo.
+
+Sem argumentos, `!adicionar` inclui quem enviou a mensagem; com um nome livre, como
+`!adicionar José da Silva`, inclui um participante avulso.
 
 ## Desenvolvimento
 

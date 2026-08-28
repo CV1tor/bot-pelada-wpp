@@ -38,6 +38,7 @@ export const criarClienteEvolutionMock = (): ClienteEvolutionApi => ({
 
 export const criarRepositorioJogadorMock = (): RepositorioJogador => ({
   salvar: vi.fn<RepositorioJogador['salvar']>(),
+  salvarAvulso: vi.fn<RepositorioJogador['salvarAvulso']>(),
   buscarPorJid: vi.fn<RepositorioJogador['buscarPorJid']>(),
   listar: vi.fn<RepositorioJogador['listar']>(),
 });

@@ -1,8 +1,11 @@
+import { createHash } from 'node:crypto';
 import type { PrismaClient } from '@prisma/client';
 import type { Jogador } from '../models/types.js';
+import { normalizarTexto } from '../utils/normalizacao.js';
 
 export interface RepositorioJogador {
   salvar(jid: string, nome: string): Promise<Jogador>;
+  salvarAvulso(nome: string): Promise<Jogador>;
   buscarPorJid(jid: string): Promise<Jogador | null>;
   listar(): Promise<Jogador[]>;
 }
@@ -17,6 +20,11 @@ export class RepositorioJogadorPrisma implements RepositorioJogador {
       update: { nome },
       select: { id: true, jid: true, nome: true },
     });
+  }
+
+  public salvarAvulso(nome: string): Promise<Jogador> {
+    const identificador = createHash('sha256').update(normalizarTexto(nome)).digest('hex');
+    return this.salvar(`avulso:${identificador}`, nome);
   }
 
   public buscarPorJid(jid: string): Promise<Jogador | null> {
