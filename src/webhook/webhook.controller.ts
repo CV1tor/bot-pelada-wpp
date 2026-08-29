@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import type { ClienteEvolutionApi } from '../integrations/evolution-api.client.js';
 import type { DispatcherComandos } from '../commands/dispatcher.js';
 import type { VotacaoService } from '../services/votacao.service.js';
+import { formatarResultadoVotacao } from '../utils/formatar-resultado-votacao.js';
 import { interpretarEventoWebhook } from './webhook.schema.js';
 
 export interface DependenciasWebhook {
@@ -55,9 +56,9 @@ export const registrarWebhook = (
 const publicarVotacoesEncerradas = async (dependencias: DependenciasWebhook): Promise<void> => {
   const encerradas = await dependencias.votacaoService.fecharExpiradas();
   for (const { votacao, resultado } of encerradas) {
-    const mensagem = resultado.totalVotos
-      ? `📊 Votação encerrada: ${resultado.jogador.nome} recebeu média ${resultado.media?.toFixed(1)} ⭐ em ${resultado.totalVotos} voto(s).`
-      : `📊 Votação encerrada: ${resultado.jogador.nome} não recebeu votos.`;
-    await dependencias.clienteEvolution.enviarTexto(votacao.grupoJid, mensagem);
+    await dependencias.clienteEvolution.enviarTexto(
+      votacao.grupoJid,
+      formatarResultadoVotacao(resultado),
+    );
   }
 };

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AdicionarCommand } from '../../src/commands/adicionar.command.js';
 import { AjudaCommand } from '../../src/commands/ajuda.command.js';
+import { EncerrarVotacaoCommand } from '../../src/commands/encerrar-votacao.command.js';
 import { LimparCommand } from '../../src/commands/limpar.command.js';
 import { ListaCommand } from '../../src/commands/lista.command.js';
 import { PixCommand } from '../../src/commands/pix.command.js';
@@ -89,6 +90,31 @@ describe('handlers de comandos', () => {
     await expect(
       new VotoCommand(servico).executar({ ...contexto, argumentos: ['7'] }),
     ).resolves.toContain('1 a 5');
+  });
+
+  it('!encerrar-votacao encerra e publica o resultado', async () => {
+    const servico = {
+      encerrarAtiva: vi.fn().mockResolvedValue({
+        tipo: 'encerrada',
+        votacao: { ...votacao(), fechada: true },
+        resultado: { jogador: jogador(), media: 4.5, totalVotos: 2 },
+      }),
+    } as unknown as VotacaoService;
+    const comando = new EncerrarVotacaoCommand(servico);
+
+    expect(comando.restritoAAdministrador).toBe(true);
+    await expect(comando.executar(contexto)).resolves.toContain('média 4.5 ⭐ em 2 voto(s)');
+    expect(servico.encerrarAtiva).toHaveBeenCalledWith(contexto.grupoJid);
+  });
+
+  it('!encerrar-votacao informa quando não existe votação ativa', async () => {
+    const servico = {
+      encerrarAtiva: vi.fn().mockResolvedValue({ tipo: 'sem_votacao' }),
+    } as unknown as VotacaoService;
+
+    await expect(new EncerrarVotacaoCommand(servico).executar(contexto)).resolves.toContain(
+      'Não há votação ativa',
+    );
   });
 
   it('!pix usa a configuração', async () => {

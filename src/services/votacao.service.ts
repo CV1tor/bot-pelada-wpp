@@ -19,6 +19,10 @@ export type ResultadoRegistroVoto =
   | { tipo: 'duplicado' }
   | { tipo: 'avaliador_desconhecido' };
 
+export type ResultadoEncerramentoVotacao =
+  | { tipo: 'encerrada'; votacao: Votacao; resultado: ResultadoVotacao }
+  | { tipo: 'sem_votacao' };
+
 const OPCOES_ENQUETE = ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'];
 const DURACAO_VOTACAO_EM_MILISSEGUNDOS = 3 * 24 * 60 * 60 * 1000;
 
@@ -99,19 +103,17 @@ export class VotacaoService {
     const expiradas = await this.repositorioVotacao.listarExpiradas(this.agora());
     const resultados: Array<{ votacao: Votacao; resultado: ResultadoVotacao }> = [];
     for (const votacao of expiradas) {
-      const fechadaAgora = await this.repositorioVotacao.fechar(votacao.id);
-      if (!fechadaAgora) continue;
-      const consolidado = await this.repositorioAvaliacao.obterResultado(votacao.id);
-      resultados.push({
-        votacao: { ...votacao, fechada: true },
-        resultado: {
-          jogador: votacao.jogador,
-          media: consolidado.media,
-          totalVotos: consolidado.total,
-        },
-      });
+      const resultado = await this.fechar(votacao);
+      if (resultado) resultados.push(resultado);
     }
     return resultados;
+  }
+
+  public async encerrarAtiva(grupoJid: string): Promise<ResultadoEncerramentoVotacao> {
+    const votacao = await this.repositorioVotacao.buscarAtivaPorGrupo(grupoJid, this.agora());
+    if (!votacao) return { tipo: 'sem_votacao' };
+    const encerramento = await this.fechar(votacao);
+    return encerramento ? { tipo: 'encerrada', ...encerramento } : { tipo: 'sem_votacao' };
   }
 
   private async registrar(
@@ -131,6 +133,22 @@ export class VotacaoService {
       permitirAtualizacao,
     );
     return registrado ? { tipo: 'registrado', votacao, estrelas } : { tipo: 'duplicado' };
+  }
+
+  private async fechar(
+    votacao: Votacao,
+  ): Promise<{ votacao: Votacao; resultado: ResultadoVotacao } | null> {
+    const fechadaAgora = await this.repositorioVotacao.fechar(votacao.id);
+    if (!fechadaAgora) return null;
+    const consolidado = await this.repositorioAvaliacao.obterResultado(votacao.id);
+    return {
+      votacao: { ...votacao, fechada: true },
+      resultado: {
+        jogador: votacao.jogador,
+        media: consolidado.media,
+        totalVotos: consolidado.total,
+      },
+    };
   }
 
   private extrairEstrelas(opcao: string): number | null {

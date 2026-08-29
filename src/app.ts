@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { AdicionarCommand } from './commands/adicionar.command.js';
 import { AjudaCommand } from './commands/ajuda.command.js';
 import { DispatcherComandos } from './commands/dispatcher.js';
+import { EncerrarVotacaoCommand } from './commands/encerrar-votacao.command.js';
 import { LimparCommand } from './commands/limpar.command.js';
 import { ListaCommand } from './commands/lista.command.js';
 import { PixCommand } from './commands/pix.command.js';
@@ -63,6 +64,7 @@ export const criarAplicacao = (
   dispatcher.registrar(
     new AdicionarCommand(listaService),
     new AjudaCommand(() => dispatcher.listar()),
+    new EncerrarVotacaoCommand(votacaoService),
     new LimparCommand(listaService),
     new ListaCommand(listaService),
     new PixCommand(configuracao.pixKey, configuracao.pixNome),

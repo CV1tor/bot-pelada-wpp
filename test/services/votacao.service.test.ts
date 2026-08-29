@@ -102,4 +102,30 @@ describe('VotacaoService', () => {
 
     expect(resultados[0]?.resultado).toMatchObject({ media: 4.5, totalVotos: 2 });
   });
+
+  it('encerra votação ativa imediatamente e consolida o resultado', async () => {
+    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(votacao());
+    vi.mocked(votacoes.fechar).mockResolvedValue(true);
+    vi.mocked(avaliacoes.obterResultado).mockResolvedValue({ media: 4, total: 3 });
+
+    const resultado = await criarServico().encerrarAtiva('grupo@g.us');
+
+    expect(votacoes.buscarAtivaPorGrupo).toHaveBeenCalledWith('grupo@g.us', agora);
+    expect(votacoes.fechar).toHaveBeenCalledWith('votacao-1');
+    expect(resultado).toMatchObject({
+      tipo: 'encerrada',
+      votacao: { fechada: true },
+      resultado: { media: 4, totalVotos: 3 },
+    });
+  });
+
+  it('não consolida novamente uma votação encerrada concorrentemente', async () => {
+    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(votacao());
+    vi.mocked(votacoes.fechar).mockResolvedValue(false);
+
+    await expect(criarServico().encerrarAtiva('grupo@g.us')).resolves.toEqual({
+      tipo: 'sem_votacao',
+    });
+    expect(avaliacoes.obterResultado).not.toHaveBeenCalled();
+  });
 });
