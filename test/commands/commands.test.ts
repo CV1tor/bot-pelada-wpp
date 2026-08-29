@@ -74,9 +74,12 @@ describe('handlers de comandos', () => {
         .fn()
         .mockResolvedValue({ tipo: 'aberta', votacao: votacao(), enqueteNativa: true }),
     } as unknown as VotacaoService;
-    await expect(
-      new VotacaoCommand(servico).executar({ ...contexto, argumentos: ['João'] }),
-    ).resolves.toContain('Enquete aberta');
+    const comando = new VotacaoCommand(servico);
+
+    expect(comando.restritoAAdministrador).toBe(true);
+    await expect(comando.executar({ ...contexto, argumentos: ['João'] })).resolves.toContain(
+      'Enquete aberta',
+    );
   });
 
   it('!voto valida nota inteira de 1 a 5', async () => {

@@ -3,7 +3,8 @@ import type { VotacaoService } from '../services/votacao.service.js';
 
 export class VotacaoCommand implements Comando {
   public readonly nome = 'votacao';
-  public readonly descricao = 'abre uma enquete nativa para avaliar um jogador';
+  public readonly descricao = 'abre uma enquete nativa para avaliar um jogador (admin)';
+  public readonly restritoAAdministrador = true;
 
   public constructor(private readonly votacaoService: VotacaoService) {}
 
