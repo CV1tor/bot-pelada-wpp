@@ -57,7 +57,7 @@ O Compose inicia PostgreSQL, Redis, Evolution API e backend. Backend e Evolution
 Com os contêineres ativos, crie a instância cujo nome é o valor de `EVOLUTION_INSTANCE_NAME`:
 
 ```bash
-curl -X POST http://localhost:8080/instance/create \
+curl -X POST http://localhost:8083/instance/create \
   -H 'Content-Type: application/json' \
   -H 'apikey: SUA_CHAVE' \
   -d '{"instanceName":"pelada-bot","integration":"WHATSAPP-BAILEYS","qrcode":true}'
@@ -66,7 +66,7 @@ curl -X POST http://localhost:8080/instance/create \
 Se o QR code não vier na criação, consulte-o:
 
 ```bash
-curl -H 'apikey: SUA_CHAVE' http://localhost:8080/instance/connect/pelada-bot
+curl -H 'apikey: SUA_CHAVE' http://localhost:8083/instance/connect/pelada-bot
 ```
 
 Leia o QR code no WhatsApp em **Aparelhos conectados**. O Compose já direciona os eventos `MESSAGES_UPSERT` e `MESSAGES_UPDATE` para `http://backend:3000/webhook`; não é preciso configurar outro webhook na instância.
@@ -75,7 +75,7 @@ Para localizar o JID do grupo depois do pareamento:
 
 ```bash
 curl -H 'apikey: SUA_CHAVE' \
-  'http://localhost:8080/group/fetchAllGroups/pelada-bot?getParticipants=false'
+  'http://localhost:8083/group/fetchAllGroups/pelada-bot?getParticipants=false'
 ```
 
 Atualize `WHATSAPP_GROUP_ID` no `.env` e recrie o backend:
