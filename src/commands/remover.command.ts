@@ -12,6 +12,7 @@ export class RemoverCommand implements Comando {
     const nome = contexto.argumentos.join(' ');
     if (!nome) return 'Informe quem deve ser removido. Exemplo: !remover Maria';
     const resultado = await this.listaService.remover(nome);
+    if (resultado.tipo === 'sem_sessao') return 'Não há uma pelada aberta.';
     if (resultado.tipo === 'nao_encontrado')
       return `Nenhum participante encontrado para “${nome}”.`;
     if (resultado.tipo === 'ambiguo') {

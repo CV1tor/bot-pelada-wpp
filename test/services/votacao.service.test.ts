@@ -4,6 +4,7 @@ import {
   criarClienteEvolutionMock,
   criarRepositorioAvaliacaoMock,
   criarRepositorioJogadorMock,
+  criarRepositorioSessaoMock,
   criarRepositorioVotacaoMock,
   jogador,
   votacao,
@@ -15,14 +16,31 @@ describe('VotacaoService', () => {
   const votacoes = criarRepositorioVotacaoMock();
   const avaliacoes = criarRepositorioAvaliacaoMock();
   const evolution = criarClienteEvolutionMock();
+  const sessoes = criarRepositorioSessaoMock();
   const criarServico = () =>
-    new VotacaoService(jogadores, votacoes, avaliacoes, evolution, () => agora);
+    new VotacaoService(jogadores, votacoes, avaliacoes, evolution, sessoes, () => agora);
 
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
+      id: 'sessao-1',
+      data: agora,
+      valorTotalCentavos: 20000,
+      participantes: [
+        {
+          ...jogador(),
+          confirmadoEm: agora,
+          canceladoEm: null,
+          presente: false,
+          pagoEm: null,
+          valorPagoCentavos: null,
+        },
+      ],
+    });
+  });
 
   it('abre enquete nativa e persiste ID e segredo', async () => {
     vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(null);
-    vi.mocked(jogadores.listar).mockResolvedValue([jogador()]);
     vi.mocked(votacoes.criar).mockResolvedValue(votacao());
     vi.mocked(evolution.enviarEnquete).mockResolvedValue({
       mensagemId: 'poll-1',
@@ -41,6 +59,7 @@ describe('VotacaoService', () => {
     expect(votacoes.criar).toHaveBeenCalledWith(
       'jogador-1',
       'grupo@g.us',
+      'sessao-1',
       new Date('2026-08-31T13:00:00.000Z'),
     );
     expect(votacoes.vincularEnquete).toHaveBeenCalledWith('votacao-1', 'poll-1', 'segredo');
@@ -48,7 +67,6 @@ describe('VotacaoService', () => {
 
   it('mantém fallback textual quando a enquete falha', async () => {
     vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(null);
-    vi.mocked(jogadores.listar).mockResolvedValue([jogador()]);
     vi.mocked(votacoes.criar).mockResolvedValue(votacao());
     vi.mocked(evolution.enviarEnquete).mockRejectedValue(new Error('indisponível'));
 

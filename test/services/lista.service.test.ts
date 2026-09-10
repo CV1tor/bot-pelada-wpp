@@ -7,7 +7,12 @@ describe('ListaService', () => {
     const jogadores = criarRepositorioJogadorMock();
     const sessoes = criarRepositorioSessaoMock();
     vi.mocked(jogadores.salvar).mockResolvedValue(jogador());
-    vi.mocked(sessoes.obterOuCriarAberta).mockResolvedValue({ id: 'sessao-1', participantes: [] });
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
+      id: 'sessao-1',
+      data: new Date(),
+      valorTotalCentavos: 20000,
+      participantes: [],
+    });
     vi.mocked(sessoes.adicionarParticipante).mockResolvedValue(true);
 
     const resultado = await new ListaService(jogadores, sessoes).adicionar(
@@ -15,7 +20,7 @@ describe('ListaService', () => {
       'João',
     );
 
-    expect(resultado.adicionado).toBe(true);
+    expect(resultado.tipo).toBe('adicionado');
     expect(sessoes.adicionarParticipante).toHaveBeenCalledWith('sessao-1', 'jogador-1');
   });
 
@@ -25,12 +30,17 @@ describe('ListaService', () => {
     vi.mocked(jogadores.salvarAvulso).mockResolvedValue(
       jogador('avulso-1', 'José da Silva', 'avulso:jose-da-silva'),
     );
-    vi.mocked(sessoes.obterOuCriarAberta).mockResolvedValue({ id: 'sessao-1', participantes: [] });
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
+      id: 'sessao-1',
+      data: new Date(),
+      valorTotalCentavos: 20000,
+      participantes: [],
+    });
     vi.mocked(sessoes.adicionarParticipante).mockResolvedValue(true);
 
     const resultado = await new ListaService(jogadores, sessoes).adicionarAvulso('José da Silva');
 
-    expect(resultado).toMatchObject({ adicionado: true, jogador: { nome: 'José da Silva' } });
+    expect(resultado).toMatchObject({ tipo: 'adicionado', jogador: { nome: 'José da Silva' } });
     expect(jogadores.salvarAvulso).toHaveBeenCalledWith('José da Silva');
     expect(sessoes.adicionarParticipante).toHaveBeenCalledWith('sessao-1', 'avulso-1');
   });
@@ -38,11 +48,27 @@ describe('ListaService', () => {
   it('informa ambiguidade ao remover por nome parcial', async () => {
     const jogadores = criarRepositorioJogadorMock();
     const sessoes = criarRepositorioSessaoMock();
-    vi.mocked(sessoes.obterOuCriarAberta).mockResolvedValue({
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
       id: 'sessao-1',
+      data: new Date(),
+      valorTotalCentavos: 20000,
       participantes: [
-        { ...jogador('1', 'João Silva'), confirmadoEm: new Date() },
-        { ...jogador('2', 'João Souza'), confirmadoEm: new Date() },
+        {
+          ...jogador('1', 'João Silva'),
+          confirmadoEm: new Date(),
+          canceladoEm: null,
+          presente: false,
+          pagoEm: null,
+          valorPagoCentavos: null,
+        },
+        {
+          ...jogador('2', 'João Souza'),
+          confirmadoEm: new Date(),
+          canceladoEm: null,
+          presente: false,
+          pagoEm: null,
+          valorPagoCentavos: null,
+        },
       ],
     });
 

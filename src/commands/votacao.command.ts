@@ -12,6 +12,7 @@ export class VotacaoCommand implements Comando {
     const nome = contexto.argumentos.join(' ');
     if (!nome) return 'Informe o jogador. Exemplo: !votacao João';
     const resultado = await this.votacaoService.iniciar(nome, contexto.grupoJid);
+    if (resultado.tipo === 'sem_sessao') return 'Não há uma pelada aberta.';
     if (resultado.tipo === 'nao_encontrado') return `Jogador “${nome}” não encontrado.`;
     if (resultado.tipo === 'ambiguo') {
       return `Encontrei mais de um jogador: ${resultado.nomes.join(', ')}. Seja mais específico.`;

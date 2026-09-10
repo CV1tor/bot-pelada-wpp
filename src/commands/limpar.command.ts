@@ -13,6 +13,7 @@ export class LimparCommand implements Comando {
       return '⚠️ Para limpar a lista, responda com !limpar confirmar.';
     }
     const removidos = await this.listaService.limpar();
+    if (removidos === null) return 'Não há uma pelada aberta.';
     return `🧹 Lista limpa. ${removidos} participante(s) removido(s).`;
   }
 }

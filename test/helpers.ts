@@ -15,6 +15,7 @@ export const jogador = (id = 'jogador-1', nome = 'João', jid = '5511@s.whatsapp
 export const votacao = (): Votacao => ({
   id: 'votacao-1',
   grupoJid: 'grupo@g.us',
+  sessaoId: 'sessao-1',
   jogador: jogador(),
   expiraEm: new Date('2026-08-31T13:00:00.000Z'),
   fechada: false,
@@ -44,10 +45,15 @@ export const criarRepositorioJogadorMock = (): RepositorioJogador => ({
 });
 
 export const criarRepositorioSessaoMock = (): RepositorioSessao => ({
-  obterOuCriarAberta: vi.fn<RepositorioSessao['obterOuCriarAberta']>(),
+  buscarAberta: vi.fn<RepositorioSessao['buscarAberta']>(),
+  criar: vi.fn<RepositorioSessao['criar']>(),
+  configurar: vi.fn<RepositorioSessao['configurar']>(),
+  encerrar: vi.fn<RepositorioSessao['encerrar']>(),
   adicionarParticipante: vi.fn<RepositorioSessao['adicionarParticipante']>(),
   removerParticipante: vi.fn<RepositorioSessao['removerParticipante']>(),
   limparParticipantes: vi.fn<RepositorioSessao['limparParticipantes']>(),
+  obterSituacaoFinanceira: vi.fn<RepositorioSessao['obterSituacaoFinanceira']>(),
+  registrarPagamento: vi.fn<RepositorioSessao['registrarPagamento']>(),
   listarParticipantesAvaliados: vi.fn<RepositorioSessao['listarParticipantesAvaliados']>(),
   substituirTimes: vi.fn<RepositorioSessao['substituirTimes']>(),
 });

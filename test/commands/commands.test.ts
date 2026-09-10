@@ -21,7 +21,25 @@ describe('handlers de comandos', () => {
     const servico = {
       obterLista: vi.fn().mockResolvedValue({
         id: 'sessao',
-        participantes: [{ ...jogador(), confirmadoEm: new Date() }],
+        data: new Date('2026-09-15T23:00:00.000Z'),
+        valorTotalCentavos: 20000,
+        participantes: [
+          {
+            ...jogador(),
+            confirmadoEm: new Date(),
+            canceladoEm: null,
+            presente: false,
+            pagoEm: null,
+            valorPagoCentavos: null,
+          },
+        ],
+      }),
+      obterSituacaoFinanceira: vi.fn().mockResolvedValue({
+        valorTotalCentavos: 20000,
+        valorRecebidoCentavos: 0,
+        saldoCentavos: 20000,
+        quantidadePendentes: 1,
+        valorIndividualCentavos: 20000,
       }),
     } as unknown as ListaService;
     await expect(new ListaCommand(servico).executar()).resolves.toContain('1. João');
@@ -29,14 +47,14 @@ describe('handlers de comandos', () => {
 
   it('!adicionar inclui o autor', async () => {
     const servico = {
-      adicionar: vi.fn().mockResolvedValue({ adicionado: true, jogador: jogador() }),
+      adicionar: vi.fn().mockResolvedValue({ tipo: 'adicionado', jogador: jogador() }),
     } as unknown as ListaService;
     await expect(new AdicionarCommand(servico).executar(contexto)).resolves.toContain('adicionado');
   });
 
   it('!adicionar com nome inclui um participante avulso', async () => {
     const adicionarAvulso = vi.fn().mockResolvedValue({
-      adicionado: true,
+      tipo: 'adicionado',
       jogador: jogador('avulso', 'José da Silva', 'avulso:jose-da-silva'),
     });
     const servico = { adicionarAvulso } as unknown as ListaService;

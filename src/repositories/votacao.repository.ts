@@ -2,7 +2,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { Votacao } from '../models/types.js';
 
 export interface RepositorioVotacao {
-  criar(playerId: string, grupoJid: string, expiraEm: Date): Promise<Votacao>;
+  criar(playerId: string, grupoJid: string, sessaoId: string, expiraEm: Date): Promise<Votacao>;
   vincularEnquete(id: string, mensagemId: string, segredo: string | null): Promise<void>;
   buscarAtivaPorGrupo(grupoJid: string, agora: Date): Promise<Votacao | null>;
   buscarPorMensagemEnquete(mensagemId: string): Promise<Votacao | null>;
@@ -13,6 +13,7 @@ export interface RepositorioVotacao {
 const selecaoVotacao = {
   id: true,
   grupoJid: true,
+  sessaoId: true,
   expiraEm: true,
   fechada: true,
   pollMessageId: true,
@@ -23,9 +24,14 @@ const selecaoVotacao = {
 export class RepositorioVotacaoPrisma implements RepositorioVotacao {
   public constructor(private readonly prisma: PrismaClient) {}
 
-  public async criar(playerId: string, grupoJid: string, expiraEm: Date): Promise<Votacao> {
+  public async criar(
+    playerId: string,
+    grupoJid: string,
+    sessaoId: string,
+    expiraEm: Date,
+  ): Promise<Votacao> {
     const votacao = await this.prisma.votacaoAtiva.create({
-      data: { playerId, grupoJid, expiraEm },
+      data: { playerId, grupoJid, sessaoId, expiraEm },
       select: selecaoVotacao,
     });
     return this.mapear(votacao);
@@ -78,6 +84,7 @@ export class RepositorioVotacaoPrisma implements RepositorioVotacao {
   private mapear(votacao: {
     id: string;
     grupoJid: string;
+    sessaoId: string | null;
     expiraEm: Date;
     fechada: boolean;
     pollMessageId: string | null;

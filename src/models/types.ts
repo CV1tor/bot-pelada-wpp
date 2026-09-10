@@ -6,6 +6,10 @@ export interface Jogador {
 
 export interface Participante extends Jogador {
   confirmadoEm: Date;
+  canceladoEm: Date | null;
+  presente: boolean;
+  pagoEm: Date | null;
+  valorPagoCentavos: number | null;
 }
 
 export interface JogadorAvaliado extends Jogador {
@@ -15,12 +19,37 @@ export interface JogadorAvaliado extends Jogador {
 
 export interface SessaoAberta {
   id: string;
+  data: Date;
+  valorTotalCentavos: number;
   participantes: Participante[];
+}
+
+export interface SituacaoFinanceira {
+  valorTotalCentavos: number;
+  valorRecebidoCentavos: number;
+  saldoCentavos: number;
+  quantidadePendentes: number;
+  valorIndividualCentavos: number;
+}
+
+export interface EstatisticasJogador {
+  jogador: Jogador;
+  peladasPresentes: number;
+  rating: number | null;
+  totalAvaliacoes: number;
+  sequenciaAtual: number;
+}
+
+export interface ResumoMensal {
+  competencia: string;
+  quantidadePeladas: number;
+  destaque: JogadorAvaliado | null;
 }
 
 export interface Votacao {
   id: string;
   grupoJid: string;
+  sessaoId: string | null;
   jogador: Jogador;
   expiraEm: Date;
   fechada: boolean;

@@ -5,7 +5,12 @@ import { criarRepositorioSessaoMock, jogador } from '../helpers.js';
 describe('SorteioService', () => {
   it('distribui jogadores em snake draft e persiste os times', async () => {
     const sessoes = criarRepositorioSessaoMock();
-    vi.mocked(sessoes.obterOuCriarAberta).mockResolvedValue({ id: 'sessao-1', participantes: [] });
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
+      id: 'sessao-1',
+      data: new Date(),
+      valorTotalCentavos: 20000,
+      participantes: [],
+    });
     vi.mocked(sessoes.listarParticipantesAvaliados).mockResolvedValue(
       [5, 4, 3, 2, 1, 1].map((media, indice) => ({
         ...jogador(String(indice), `Jogador ${indice}`, `${indice}@s.whatsapp.net`),

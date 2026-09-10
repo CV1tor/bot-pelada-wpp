@@ -15,7 +15,8 @@ export class AdicionarCommand implements Comando {
       : nomeAvulso
         ? await this.listaService.adicionarAvulso(nomeAvulso)
         : await this.listaService.adicionar(contexto.remetenteJid, contexto.remetenteNome);
-    return resultado.adicionado
+    if (resultado.tipo === 'sem_sessao') return 'Não há uma pelada aberta.';
+    return resultado.tipo === 'adicionado'
       ? `✅ ${resultado.jogador.nome} foi adicionado à lista.`
       : `ℹ️ ${resultado.jogador.nome} já está na lista.`;
   }

@@ -8,7 +8,8 @@ export class SorteioService {
     if (!Number.isInteger(quantidadeTimes) || quantidadeTimes < 2) {
       throw new Error('A quantidade de times deve ser um número inteiro maior ou igual a 2.');
     }
-    const sessao = await this.repositorioSessao.obterOuCriarAberta();
+    const sessao = await this.repositorioSessao.buscarAberta();
+    if (!sessao) throw new Error('Não há uma pelada aberta.');
     const jogadores = await this.repositorioSessao.listarParticipantesAvaliados(sessao.id);
     if (jogadores.length < quantidadeTimes) {
       throw new Error('Não há jogadores suficientes para formar essa quantidade de times.');

@@ -3,11 +3,13 @@ import type { ResultadoVotacao, Votacao } from '../models/types.js';
 import type { RepositorioAvaliacao } from '../repositories/avaliacao.repository.js';
 import type { RepositorioJogador } from '../repositories/player.repository.js';
 import type { RepositorioVotacao } from '../repositories/votacao.repository.js';
+import type { RepositorioSessao } from '../repositories/sessao.repository.js';
 import { resolverJogadorPorNome } from '../utils/resolver-jogador.js';
 
 export type ResultadoInicioVotacao =
   | { tipo: 'aberta'; votacao: Votacao; enqueteNativa: boolean }
   | { tipo: 'ja_existe'; votacao: Votacao }
+  | { tipo: 'sem_sessao' }
   | { tipo: 'nao_encontrado' }
   | { tipo: 'ambiguo'; nomes: string[] };
 
@@ -32,14 +34,17 @@ export class VotacaoService {
     private readonly repositorioVotacao: RepositorioVotacao,
     private readonly repositorioAvaliacao: RepositorioAvaliacao,
     private readonly clienteEvolution: ClienteEvolutionApi,
+    private readonly repositorioSessao: RepositorioSessao,
     private readonly agora: () => Date = () => new Date(),
   ) {}
 
   public async iniciar(nome: string, grupoJid: string): Promise<ResultadoInicioVotacao> {
+    const sessao = await this.repositorioSessao.buscarAberta();
+    if (!sessao) return { tipo: 'sem_sessao' };
     const ativa = await this.repositorioVotacao.buscarAtivaPorGrupo(grupoJid, this.agora());
     if (ativa) return { tipo: 'ja_existe', votacao: ativa };
 
-    const resolucao = resolverJogadorPorNome(await this.repositorioJogador.listar(), nome);
+    const resolucao = resolverJogadorPorNome(sessao.participantes, nome);
     if (resolucao.tipo === 'nao_encontrado') return { tipo: 'nao_encontrado' };
     if (resolucao.tipo === 'ambiguo') {
       return {
@@ -49,7 +54,12 @@ export class VotacaoService {
     }
 
     const expiraEm = new Date(this.agora().getTime() + DURACAO_VOTACAO_EM_MILISSEGUNDOS);
-    const votacao = await this.repositorioVotacao.criar(resolucao.jogador.id, grupoJid, expiraEm);
+    const votacao = await this.repositorioVotacao.criar(
+      resolucao.jogador.id,
+      grupoJid,
+      sessao.id,
+      expiraEm,
+    );
     let enquete;
     try {
       enquete = await this.clienteEvolution.enviarEnquete(
