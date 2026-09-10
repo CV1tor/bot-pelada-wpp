@@ -4,7 +4,7 @@
 
 ## 1. Visão geral
 
-Bot para um grupo de WhatsApp de pelada de vôlei, integrado via **Evolution API**. O bot escuta mensagens de um grupo específico, interpreta comandos prefixados com `!` e responde com informações sobre a lista de presença, ranking de jogadores, sorteio de times equilibrados e dados administrativos (pix, local, etc).
+Bot para um grupo de WhatsApp de pelada de vôlei, integrado via **Evolution API**. O bot escuta mensagens de um grupo específico, interpreta comandos prefixados com `!` e responde com informações sobre sessões, presença, pagamentos, ranking, estatísticas e sorteio de times equilibrados.
 
 Não há interface visual — toda a interação acontece por texto dentro do grupo do WhatsApp.
 
@@ -113,9 +113,12 @@ model Player {
 }
 
 model Sessao {
-  id          String   @id @default(uuid())
-  data        DateTime @default(now())
-  status      StatusSessao @default(ABERTA)
+  id                 String   @id @default(uuid())
+  data               DateTime
+  valorTotalCentavos Int
+  status             StatusSessao @default(ABERTA)
+  chaveAberta        String?  @unique @default("ATIVA")
+  encerradaEm        DateTime?
 
   participantes ListaParticipante[]
   times         Time[]
@@ -127,10 +130,14 @@ enum StatusSessao {
 }
 
 model ListaParticipante {
-  id          String   @id @default(uuid())
-  sessaoId    String
-  playerId    String
-  confirmadoEm DateTime @default(now())
+  id                String   @id @default(uuid())
+  sessaoId          String
+  playerId          String
+  confirmadoEm      DateTime @default(now())
+  canceladoEm       DateTime?
+  presente          Boolean  @default(false)
+  pagoEm            DateTime?
+  valorPagoCentavos Int?
 
   sessao      Sessao   @relation(fields: [sessaoId], references: [id])
   player      Player   @relation(fields: [playerId], references: [id])
@@ -159,6 +166,12 @@ model VotacaoAtiva {
   fechada           Boolean  @default(false)
   pollMessageId     String?  // preenchido somente se a Fase 2 (enquete nativa) estiver ativa
   pollMessageSecret String?  // necessário para decifrar os votos da enquete nativa (ver seção 7)
+  sessaoId          String?
+}
+
+model ResumoMensalPublicado {
+  competencia String   @id
+  publicadoEm DateTime @default(now())
 }
 
 model Time {
@@ -175,10 +188,37 @@ model Time {
 
 Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio`) exigem que o remetente seja **admin do grupo** (ver seção 9). Todo comando deve responder no próprio grupo, mencionando o autor quando fizer sentido.
 
+### `!abrir-pelada DD/MM/AAAA HH:mm VALOR`
+- **Restrito a admin.**
+- Cria a única sessão aberta, com data, horário e custo total em reais.
+- Não há limite de participantes nem lista de espera.
+- Recusa a operação quando já existir uma sessão aberta.
+
+### `!encerrar-pelada confirmar`
+- **Restrito a admin.**
+- Encerra a sessão atual e consolida como presentes todos os jogadores que continuarem confirmados.
+- Preserva participantes, pagamentos, times e avaliações para as estatísticas históricas.
+
+### `!confirmar` / `!sair`
+- Permitem que o autor confirme ou retire a própria presença.
+- Ambos são idempotentes e não exigem permissão administrativa.
+- Sair não apaga o cadastro, o histórico nem um pagamento já registrado.
+
+### `!paguei`
+- Registra imediatamente o pagamento do próprio jogador confirmado.
+- O valor é o saldo restante dividido entre os participantes confirmados ainda pendentes.
+- Entradas e saídas posteriores recalculam apenas as parcelas ainda não pagas.
+- Repetir o comando não registra nem desconta um segundo pagamento.
+
+### `!estatisticas [nome | @contato]`
+- Sem argumento, consulta o autor; com argumento, consulta o jogador resolvido.
+- Exibe somente peladas presentes, rating geral e sequência atual de presenças consecutivas.
+- Apenas sessões encerradas são contabilizadas como presença.
+
 ### `!lista`
 - **Descrição**: mostra a listagem atual de participantes confirmados na sessão aberta.
 - **Args**: nenhum.
-- **Comportamento**: busca a `Sessao` com status `ABERTA` (cria uma nova se não existir nenhuma aberta) e lista os `ListaParticipante` ordenados por `confirmadoEm`.
+- **Comportamento**: busca a `Sessao` com status `ABERTA` e lista os participantes ativos ordenados por `confirmadoEm`, com data, valor, pagamento, parcela atual e saldo.
 - **Resposta exemplo**:
   ```
   📋 Lista da pelada (7 confirmados):
@@ -195,7 +235,7 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 
 ### `!limpar`
 - **Restrito a admin.**
-- **Descrição**: limpa todos os participantes da sessão aberta atual (não apaga histórico, apenas remove os `ListaParticipante` da sessão vigente).
+- **Descrição**: cancela todas as confirmações da sessão aberta atual sem apagar cadastros ou histórico anterior.
 - **Confirmação**: pedir confirmação explícita (ex: responder `!limpar confirmar`) para evitar limpeza acidental.
 
 ### `!remover [nome]`
@@ -252,20 +292,15 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 ### `!ajuda`
 - **Descrição**: lista todos os comandos disponíveis com uma linha de descrição cada. Deve ser gerado dinamicamente a partir do registro de comandos no dispatcher (evitar lista hardcoded que desatualiza).
 
-## 8. Comandos de fase 2 (backlog, não bloqueiam o MVP)
+## 8. Funcionalidades complementares
 
 | Comando | Função |
 |---|---|
-| `!confirmar` / `!sair` | jogador se adiciona/remove sozinho da lista |
-| `!vagas` | mostra vagas restantes se houver limite configurado |
 | `!proximo` | data/local do próximo jogo (config estática) |
 | `!local` | endereço fixo da quadra |
-| `!estatisticas [nome]` | histórico individual: jogos, presença, média |
 | `!historico` | lista sessões anteriores e participantes |
 | `!time [numero]` | reenvia composição de um time específico |
 | `!trocar [nome1] [nome2]` | troca dois jogadores entre times já sorteados |
-| `!pagamento [nome]` | marca jogador como pago na sessão |
-| `!inadimplentes` | lista quem não marcou pagamento |
 | `!regras` | texto fixo com as regras da pelada |
 | `!votacao` (fase 2) | migrar de `!voto N` por texto para enquete nativa do WhatsApp, após validar suporte a decriptação de votos na versão da Evolution API em uso (ver seção 7) |
 
@@ -273,6 +308,9 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 
 - **Admin do grupo**: antes de executar comandos restritos, consultar os metadados do grupo via Evolution API (`GET /group/participants/{instance}`) e verificar se o `jid` do remetente tem papel `admin` ou `superadmin`. Se não for admin, responder com mensagem de permissão negada — nunca falhar silenciosamente.
 - **Sessão aberta**: deve sempre existir no máximo uma `Sessao` com status `ABERTA`. Comandos como `!lista`, `!adicionar`, `!sorteio` operam sempre sobre ela.
+- **Presença**: confirmação só se transforma em presença quando a sessão é encerrada.
+- **Pagamento**: o custo total é fixado na abertura; os valores já pagos são imutáveis e o saldo é redistribuído apenas entre confirmados pendentes.
+- **Resumo mensal**: a cada hora, o processo tenta publicar uma única vez o resumo do mês anterior. Votações ainda válidas adiam a publicação.
 - **Resolução de nome por texto livre**: centralizar em uma função utilitária (`resolvePlayerByName`) usada por `!remover`, `!votacao`, `!time`, `!trocar` — normaliza acentos/maiúsculas e faz match parcial.
 - **Idempotência de voto**: um jogador não pode votar duas vezes na mesma votação ativa.
 

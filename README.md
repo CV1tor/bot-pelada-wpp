@@ -7,11 +7,16 @@ Bot para gerenciar uma pelada de vôlei em um grupo do WhatsApp. O backend receb
 ## Funcionalidades
 
 - Lista de presença com inclusão, remoção e limpeza segura.
+- Abertura de pelada com data, horário e valor total.
+- Confirmação e saída pelo próprio jogador, sem limite de vagas.
+- Rateio dinâmico do saldo e confirmação individual com `!paguei`.
 - Ranking que exige pelo menos três avaliações por jogador.
 - Votação por enquete nativa do WhatsApp, com `!voto N` como fallback automático.
 - Sorteio equilibrado por snake draft, considerando a média de cada jogador.
 - Verificação de administrador diretamente nos metadados do grupo.
 - Bloqueio de mensagens oriundas de outros grupos.
+- Estatísticas individuais de presença, rating e sequência atual.
+- Resumo mensal automático com a quantidade de peladas e o maior rating do mês.
 
 ## Pré-requisitos
 
@@ -96,6 +101,10 @@ O ranking reflete as avaliações persistidas e passa a exibir o jogador a parti
 
 Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece:
 
+- `!abrir-pelada DD/MM/AAAA HH:mm VALOR`
+- `!encerrar-pelada confirmar`
+- `!confirmar`
+- `!sair`
 - `!lista`
 - `!adicionar [@contato | nome livre]`
 - `!remover nome`
@@ -105,13 +114,50 @@ Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece
 - `!encerrar-votacao`
 - `!voto N`
 - `!pix`
+- `!paguei`
+- `!estatisticas [nome | @contato]`
 - `!sorteio [quantidade]`
 - `!ajuda`
 
-`!remover`, `!limpar`, `!sorteio`, `!votacao` e `!encerrar-votacao` exigem administrador do grupo.
+`!abrir-pelada`, `!encerrar-pelada`, `!remover`, `!limpar`, `!sorteio`, `!votacao` e
+`!encerrar-votacao` exigem administrador do grupo.
 
 Sem argumentos, `!adicionar` inclui quem enviou a mensagem; com um nome livre, como
 `!adicionar José da Silva`, inclui um participante avulso.
+
+### Fluxo da pelada
+
+O administrador abre uma sessão informando data, horário e custo total:
+
+```text
+!abrir-pelada 15/09/2026 20:00 200
+```
+
+Não há limite de vagas. Cada jogador pode entrar e sair da lista com `!confirmar` e `!sair`.
+Enquanto ninguém tiver pago, o custo é dividido igualmente entre os confirmados. Depois do
+primeiro pagamento, a próxima parcela é calculada dividindo o saldo restante entre os
+participantes confirmados ainda pendentes. Dessa forma, entradas e saídas atualizam o rateio sem
+alterar valores já pagos.
+
+`!paguei` registra imediatamente o pagamento do próprio jogador e é idempotente. `!lista` mostra
+quem pagou, quem está pendente, a parcela atual e o saldo da sessão.
+
+Ao final, o administrador executa:
+
+```text
+!encerrar-pelada confirmar
+```
+
+Os jogadores que permanecerem confirmados são consolidados como presentes. Somente sessões
+encerradas contam em `!estatisticas`. O comando apresenta apenas o total de peladas presentes, o
+rating geral e a sequência de presenças em sessões consecutivas.
+
+### Resumo mensal
+
+O backend verifica o fechamento mensal a cada hora. No primeiro processamento após a virada do
+mês, envia uma única mensagem com a quantidade de peladas encerradas e o jogador com maior média
+nas avaliações vinculadas às peladas do mês anterior. Se ainda existir uma votação válida em
+andamento, a publicação aguarda seu término.
 
 ## Desenvolvimento
 
