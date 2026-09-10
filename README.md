@@ -1,6 +1,6 @@
 # Bot da Pelada de Vôlei
 
-[![CI](https://github.com/CV1tor/bot-pelada-wpp/actions/workflows/ci.yml/badge.svg)](https://github.com/CV1tor/bot-pelada-wpp/actions/workflows/ci.yml)
+[![RELEASE](https://github.com/CV1tor/bot-pelada-wpp/actions/workflows/release.yml/badge.svg)](https://github.com/CV1tor/bot-pelada-wpp/actions/workflows/release.yml)
 
 Bot para gerenciar uma pelada de vôlei em um grupo do WhatsApp. O backend recebe os eventos da Evolution API, executa comandos, persiste os dados em PostgreSQL e responde no mesmo grupo.
 
