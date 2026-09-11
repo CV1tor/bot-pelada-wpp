@@ -256,6 +256,7 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 
 ### `!votacao [nome | todos]`
 - **Descrição**: abre uma enquete nativa do WhatsApp, de 1 a 5 estrelas, para o jogador informado. Com `todos`, abre uma enquete para cada jogador confirmado na lista da pelada aberta.
+- Sem argumentos, tem o mesmo comportamento de `!votacao todos`.
 - A abertura para todos preserva votações que já estejam ativas e continua processando os demais jogadores quando uma enquete falha.
 - Resolve o `Player` pelo nome e chama `POST /message/sendPoll/{instance}` com as opções `["1 ⭐", "2 ⭐", "3 ⭐", "4 ⭐", "5 ⭐"]` e `selectableCount: 1`.
 - A votação expira 24 horas após sua criação. Um agendador verifica expirações a cada minuto, consolida as avaliações e publica o resultado.
@@ -265,10 +266,11 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 - Um jogador não pode se autoavaliar. Uma nova seleção na mesma enquete substitui sua seleção anterior.
 - O prazo é controlado pelo backend; caso a enquete continue visualmente aberta no WhatsApp, votos recebidos depois da expiração são ignorados.
 
-### `!encerrar-votacao [nome]`
+### `!encerrar-votacao [nome | todas]`
 - **Restrito a admin.**
 - Encerra antecipadamente a votação ativa do jogador informado e publica o resultado consolidado.
-- O nome é obrigatório porque mais de uma votação pode estar ativa no grupo.
+- Com `todas`, encerra todas as votações ativas do grupo e publica o resultado consolidado de cada jogador.
+- Sem argumentos, tem o mesmo comportamento de `!encerrar-votacao todas`.
 
 ### `!pix`
 - **Descrição**: envia a chave pix da pelada (valor fixo, configurável via variável de ambiente `PIX_KEY` e `PIX_NOME`).
@@ -302,7 +304,7 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 | `!time [numero]` | reenvia composição de um time específico |
 | `!trocar [nome1] [nome2]` | troca dois jogadores entre times já sorteados |
 | `!regras` | texto fixo com as regras da pelada |
-| `!encerrar-votacao [nome]` | encerra antecipadamente uma enquete e publica seu resultado |
+| `!encerrar-votacao [nome \| todas]` | encerra uma enquete ou todas as ativas e publica os resultados |
 
 ## 9. Regras de negócio transversais
 
