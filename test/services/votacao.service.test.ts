@@ -280,4 +280,57 @@ describe('VotacaoService', () => {
     });
     expect(avaliacoes.obterResultado).not.toHaveBeenCalled();
   });
+
+  it('encerra todas as votações ativas do grupo', async () => {
+    const segundaVotacao = {
+      ...votacao(),
+      id: 'votacao-2',
+      jogador: jogador('jogador-2', 'Maria', '5522@s.whatsapp.net'),
+    };
+    vi.mocked(votacoes.listarAtivasPorGrupo).mockResolvedValue([votacao(), segundaVotacao]);
+    vi.mocked(votacoes.fechar).mockResolvedValue(true);
+    vi.mocked(avaliacoes.obterResultado)
+      .mockResolvedValueOnce({ media: 4, total: 3 })
+      .mockResolvedValueOnce({ media: null, total: 0 });
+
+    const resultado = await criarServico().encerrarTodasAtivas('grupo@g.us');
+
+    expect(votacoes.listarAtivasPorGrupo).toHaveBeenCalledWith('grupo@g.us', agora);
+    expect(votacoes.fechar).toHaveBeenNthCalledWith(1, 'votacao-1');
+    expect(votacoes.fechar).toHaveBeenNthCalledWith(2, 'votacao-2');
+    expect(resultado).toMatchObject({
+      tipo: 'encerradas',
+      resultados: [
+        { votacao: { id: 'votacao-1', fechada: true }, resultado: { media: 4, totalVotos: 3 } },
+        {
+          votacao: { id: 'votacao-2', fechada: true },
+          resultado: { media: null, totalVotos: 0 },
+        },
+      ],
+      ignoradas: 0,
+    });
+  });
+
+  it('ignora no encerramento em lote uma votação encerrada concorrentemente', async () => {
+    const segundaVotacao = { ...votacao(), id: 'votacao-2' };
+    vi.mocked(votacoes.listarAtivasPorGrupo).mockResolvedValue([votacao(), segundaVotacao]);
+    vi.mocked(votacoes.fechar).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    vi.mocked(avaliacoes.obterResultado).mockResolvedValue({ media: 5, total: 1 });
+
+    await expect(criarServico().encerrarTodasAtivas('grupo@g.us')).resolves.toMatchObject({
+      tipo: 'encerradas',
+      resultados: [{ votacao: { id: 'votacao-2' } }],
+      ignoradas: 1,
+    });
+    expect(avaliacoes.obterResultado).toHaveBeenCalledOnce();
+  });
+
+  it('informa quando não existem votações ativas para encerrar', async () => {
+    vi.mocked(votacoes.listarAtivasPorGrupo).mockResolvedValue([]);
+
+    await expect(criarServico().encerrarTodasAtivas('grupo@g.us')).resolves.toEqual({
+      tipo: 'sem_votacao',
+    });
+    expect(votacoes.fechar).not.toHaveBeenCalled();
+  });
 });

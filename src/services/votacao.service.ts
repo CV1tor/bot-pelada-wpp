@@ -37,6 +37,14 @@ export type ResultadoEncerramentoVotacao =
   | { tipo: 'sem_votacao' }
   | { tipo: 'ambiguo'; nomes: string[] };
 
+export type ResultadoEncerramentoVotacoes =
+  | {
+      tipo: 'encerradas';
+      resultados: Array<{ votacao: Votacao; resultado: ResultadoVotacao }>;
+      ignoradas: number;
+    }
+  | { tipo: 'sem_votacao' };
+
 const OPCOES_ENQUETE = ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'];
 const DURACAO_VOTACAO_EM_MILISSEGUNDOS = 24 * 60 * 60 * 1000;
 
@@ -182,6 +190,24 @@ export class VotacaoService {
     if (!votacao) return { tipo: 'sem_votacao' };
     const encerramento = await this.fechar(votacao);
     return encerramento ? { tipo: 'encerrada', ...encerramento } : { tipo: 'sem_votacao' };
+  }
+
+  public async encerrarTodasAtivas(grupoJid: string): Promise<ResultadoEncerramentoVotacoes> {
+    const votacoes = await this.repositorioVotacao.listarAtivasPorGrupo(grupoJid, this.agora());
+    if (!votacoes.length) return { tipo: 'sem_votacao' };
+
+    const resultados: Array<{ votacao: Votacao; resultado: ResultadoVotacao }> = [];
+    for (const votacao of votacoes) {
+      const encerramento = await this.fechar(votacao);
+      if (encerramento) resultados.push(encerramento);
+    }
+
+    if (!resultados.length) return { tipo: 'sem_votacao' };
+    return {
+      tipo: 'encerradas',
+      resultados,
+      ignoradas: votacoes.length - resultados.length,
+    };
   }
 
   private async registrar(

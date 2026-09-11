@@ -10,8 +10,9 @@ export class VotacaoCommand implements Comando {
 
   public async executar(contexto: ContextoComando): Promise<string> {
     const nome = contexto.argumentos.join(' ');
-    if (!nome) return 'Informe o jogador ou use !votacao todos.';
-    if (nome.toLocaleLowerCase('pt-BR') === 'todos') return this.iniciarTodos(contexto.grupoJid);
+    if (!nome || nome.toLocaleLowerCase('pt-BR') === 'todos') {
+      return this.iniciarTodos(contexto.grupoJid);
+    }
 
     const resultado = await this.votacaoService.iniciar(nome, contexto.grupoJid);
     if (resultado.tipo === 'sem_sessao') return 'Não há uma pelada aberta.';

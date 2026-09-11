@@ -98,7 +98,7 @@ describe('handlers de comandos', () => {
     );
   });
 
-  it('!votacao todos abre enquetes para os confirmados e resume o processamento', async () => {
+  it('!votacao sem argumentos abre enquetes para os confirmados e resume o processamento', async () => {
     const iniciarTodos = vi.fn().mockResolvedValue({
       tipo: 'processada',
       abertas: [votacao()],
@@ -109,7 +109,7 @@ describe('handlers de comandos', () => {
 
     const resposta = await new VotacaoCommand(servico).executar({
       ...contexto,
-      argumentos: ['todos'],
+      argumentos: [],
     });
 
     expect(iniciarTodos).toHaveBeenCalledWith(contexto.grupoJid);
@@ -153,6 +153,48 @@ describe('handlers de comandos', () => {
     await expect(
       new EncerrarVotacaoCommand(servico).executar({ ...contexto, argumentos: ['João'] }),
     ).resolves.toContain('Não há votação ativa para “João”');
+  });
+
+  it('!encerrar-votacao sem argumentos publica todos os resultados', async () => {
+    const encerrarTodasAtivas = vi.fn().mockResolvedValue({
+      tipo: 'encerradas',
+      resultados: [
+        {
+          votacao: { ...votacao(), fechada: true },
+          resultado: { jogador: jogador(), media: 4.5, totalVotos: 2 },
+        },
+        {
+          votacao: { ...votacao(), id: 'votacao-2', fechada: true },
+          resultado: {
+            jogador: jogador('jogador-2', 'Maria'),
+            media: null,
+            totalVotos: 0,
+          },
+        },
+      ],
+      ignoradas: 1,
+    });
+    const servico = { encerrarTodasAtivas } as unknown as VotacaoService;
+
+    const resposta = await new EncerrarVotacaoCommand(servico).executar({
+      ...contexto,
+      argumentos: [],
+    });
+
+    expect(encerrarTodasAtivas).toHaveBeenCalledWith(contexto.grupoJid);
+    expect(resposta).toContain('João recebeu média 4.5');
+    expect(resposta).toContain('Maria não recebeu votos');
+    expect(resposta).toContain('1 votação(ões) já havia(m) sido encerrada(s)');
+  });
+
+  it('!encerrar-votacao todas informa quando não existem votações ativas', async () => {
+    const servico = {
+      encerrarTodasAtivas: vi.fn().mockResolvedValue({ tipo: 'sem_votacao' }),
+    } as unknown as VotacaoService;
+
+    await expect(
+      new EncerrarVotacaoCommand(servico).executar({ ...contexto, argumentos: ['todas'] }),
+    ).resolves.toBe('Não há votações ativas.');
   });
 
   it('!pix usa a configuração', async () => {
