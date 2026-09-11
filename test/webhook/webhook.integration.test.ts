@@ -54,6 +54,39 @@ describe('webhook', () => {
     await servidor.close();
   });
 
+  it('distingue mensagem do celular vinculado de mensagem enviada pela API', () => {
+    const mensagemCelular = interpretarEventoWebhook({
+      event: 'MESSAGES_UPSERT',
+      data: {
+        key: {
+          remoteJid: 'grupo@g.us',
+          participant: '5511@lid',
+          fromMe: true,
+        },
+        message: { conversation: '!eco' },
+      },
+    });
+    const mensagemApi = interpretarEventoWebhook({
+      event: 'MESSAGES_UPSERT',
+      data: {
+        key: { remoteJid: 'grupo@g.us', fromMe: true },
+        message: { conversation: 'resposta do bot' },
+      },
+    });
+
+    expect(mensagemCelular).toMatchObject({
+      tipo: 'mensagem',
+      mensagem: {
+        remetenteJid: '5511@lid',
+        enviadaPeloBot: false,
+      },
+    });
+    expect(mensagemApi).toMatchObject({
+      tipo: 'mensagem',
+      mensagem: { enviadaPeloBot: true },
+    });
+  });
+
   it('decodifica hash binário da opção em POLLS_UPDATE', () => {
     const hash = [...createHash('sha256').update('5 ⭐').digest()];
     const evento = interpretarEventoWebhook({

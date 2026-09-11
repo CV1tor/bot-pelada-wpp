@@ -56,12 +56,13 @@ const interpretarMensagem = (corpo: unknown): EventoWebhookInterpretado => {
   if (!dados || !chave || !mensagem) return { tipo: 'ignorado' };
 
   const grupoJid = typeof chave.remoteJid === 'string' ? chave.remoteJid : '';
-  const remetenteJid =
+  const participanteJid =
     typeof chave.participant === 'string'
       ? chave.participant
       : typeof dados.participant === 'string'
         ? dados.participant
-        : grupoJid;
+        : '';
+  const remetenteJid = participanteJid || grupoJid;
   const texto = textoNoCaminho(mensagem, [
     ['conversation'],
     ['extendedTextMessage', 'text'],
@@ -83,7 +84,7 @@ const interpretarMensagem = (corpo: unknown): EventoWebhookInterpretado => {
           : (remetenteJid.split('@')[0] ?? remetenteJid),
       texto,
       mencionados,
-      enviadaPeloBot: chave.fromMe === true,
+      enviadaPeloBot: chave.fromMe === true && !participanteJid,
     },
   };
 };
