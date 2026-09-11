@@ -126,7 +126,30 @@ const interpretarEnquete = (corpo: unknown): EventoWebhookInterpretado => {
   const dados = objetoNoCaminho(corpo, ['data']);
   if (!dados) return { tipo: 'ignorado' };
   const chave = objetoNoCaminho(dados, ['key']);
-  const grupoJid = textoNoCaminho(chave, [['remoteJid']]);
+  const grupoJid = textoNoCaminho(dados, [['remoteJid']]) || textoNoCaminho(chave, [['remoteJid']]);
+  const mensagemEnqueteIdAgregada = textoNoCaminho(dados, [['keyId'], ['messageId']]);
+  const atualizacoesAgregadas = valorNoCaminho(dados, ['pollUpdates']);
+  if (mensagemEnqueteIdAgregada && Array.isArray(atualizacoesAgregadas)) {
+    const atualizacoes = atualizacoesAgregadas.flatMap((opcao): AtualizacaoEnquete[] => {
+      const registroOpcao = registro(opcao);
+      const nome = registroOpcao?.name;
+      const votantes = registroOpcao?.voters;
+      if (typeof nome !== 'string' || !Array.isArray(votantes)) return [];
+      return votantes.flatMap((remetenteJid) =>
+        typeof remetenteJid === 'string'
+          ? [
+              {
+                grupoJid,
+                remetenteJid,
+                mensagemEnqueteId: mensagemEnqueteIdAgregada,
+                opcoesSelecionadas: [nome],
+              },
+            ]
+          : [],
+      );
+    });
+    return atualizacoes.length ? { tipo: 'enquete', atualizacoes } : { tipo: 'ignorado' };
+  }
   const remetentePadrao = textoNoCaminho(chave, [['participant'], ['remoteJid']]);
   const fontes = [
     valorNoCaminho(dados, ['update', 'pollUpdates']),

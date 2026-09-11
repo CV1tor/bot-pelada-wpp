@@ -9,7 +9,6 @@ import { RankingCommand } from '../../src/commands/ranking.command.js';
 import { RemoverCommand } from '../../src/commands/remover.command.js';
 import { SorteioCommand } from '../../src/commands/sorteio.command.js';
 import { VotacaoCommand } from '../../src/commands/votacao.command.js';
-import { VotoCommand } from '../../src/commands/voto.command.js';
 import type { ListaService } from '../../src/services/lista.service.js';
 import type { RankingService } from '../../src/services/ranking.service.js';
 import type { SorteioService } from '../../src/services/sorteio.service.js';
@@ -89,9 +88,7 @@ describe('handlers de comandos', () => {
 
   it('!votacao informa que abriu a enquete nativa', async () => {
     const servico = {
-      iniciar: vi
-        .fn()
-        .mockResolvedValue({ tipo: 'aberta', votacao: votacao(), enqueteNativa: true }),
+      iniciar: vi.fn().mockResolvedValue({ tipo: 'aberta', votacao: votacao() }),
     } as unknown as VotacaoService;
     const comando = new VotacaoCommand(servico);
 
@@ -99,15 +96,6 @@ describe('handlers de comandos', () => {
     await expect(comando.executar({ ...contexto, argumentos: ['João'] })).resolves.toContain(
       'Enquete aberta',
     );
-  });
-
-  it('!voto valida nota inteira de 1 a 5', async () => {
-    const servico = {
-      registrarVotoTexto: vi.fn().mockResolvedValue({ tipo: 'invalido' }),
-    } as unknown as VotacaoService;
-    await expect(
-      new VotoCommand(servico).executar({ ...contexto, argumentos: ['7'] }),
-    ).resolves.toContain('1 a 5');
   });
 
   it('!encerrar-votacao encerra e publica o resultado', async () => {

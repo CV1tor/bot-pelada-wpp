@@ -17,7 +17,6 @@ import { SorteioCommand } from './commands/sorteio.command.js';
 import { ConfirmarCommand } from './commands/confirmar.command.js';
 import { SairCommand } from './commands/sair.command.js';
 import { VotacaoCommand } from './commands/votacao.command.js';
-import { VotoCommand } from './commands/voto.command.js';
 import type { Configuracao } from './config.js';
 import {
   EvolutionApiClient,
@@ -101,7 +100,6 @@ export const criarAplicacao = (
     new SairCommand(listaService),
     new SorteioCommand(sorteioService),
     new VotacaoCommand(votacaoService),
-    new VotoCommand(votacaoService),
   );
 
   servidor.get('/health', () => ({ status: 'ok' }));

@@ -49,7 +49,7 @@ describe('VotacaoService', () => {
 
     const resultado = await criarServico().iniciar('joao', 'grupo@g.us');
 
-    expect(resultado).toMatchObject({ tipo: 'aberta', enqueteNativa: true });
+    expect(resultado).toMatchObject({ tipo: 'aberta' });
     expect(evolution.enviarEnquete).toHaveBeenCalledWith(
       'grupo@g.us',
       'Avaliação de João',
@@ -65,15 +65,15 @@ describe('VotacaoService', () => {
     expect(votacoes.vincularEnquete).toHaveBeenCalledWith('votacao-1', 'poll-1', 'segredo');
   });
 
-  it('mantém fallback textual quando a enquete falha', async () => {
+  it('cancela a votação quando a enquete nativa falha', async () => {
     vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(null);
     vi.mocked(votacoes.criar).mockResolvedValue(votacao());
     vi.mocked(evolution.enviarEnquete).mockRejectedValue(new Error('indisponível'));
 
-    await expect(criarServico().iniciar('João', 'grupo@g.us')).resolves.toMatchObject({
-      tipo: 'aberta',
-      enqueteNativa: false,
+    await expect(criarServico().iniciar('João', 'grupo@g.us')).resolves.toEqual({
+      tipo: 'falha_enquete',
     });
+    expect(votacoes.fechar).toHaveBeenCalledWith('votacao-1');
   });
 
   it('registra opção recebida pela enquete e permite atualizar a seleção', async () => {
@@ -100,12 +100,15 @@ describe('VotacaoService', () => {
     );
   });
 
-  it('impede autoavaliação', async () => {
-    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(votacao());
+  it('impede autoavaliação pela enquete', async () => {
+    vi.mocked(votacoes.buscarPorMensagemEnquete).mockResolvedValue({
+      ...votacao(),
+      pollMessageId: 'poll-1',
+    });
     vi.mocked(jogadores.buscarPorJid).mockResolvedValue(jogador());
 
     await expect(
-      criarServico().registrarVotoTexto('grupo@g.us', '5511@s.whatsapp.net', 5),
+      criarServico().registrarVotoEnquete('poll-1', '5511@s.whatsapp.net', ['5 ⭐']),
     ).resolves.toEqual({
       tipo: 'autoavaliacao',
     });

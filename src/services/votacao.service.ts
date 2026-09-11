@@ -7,7 +7,8 @@ import type { RepositorioSessao } from '../repositories/sessao.repository.js';
 import { resolverJogadorPorNome } from '../utils/resolver-jogador.js';
 
 export type ResultadoInicioVotacao =
-  | { tipo: 'aberta'; votacao: Votacao; enqueteNativa: boolean }
+  | { tipo: 'aberta'; votacao: Votacao }
+  | { tipo: 'falha_enquete' }
   | { tipo: 'ja_existe'; votacao: Votacao }
   | { tipo: 'sem_sessao' }
   | { tipo: 'nao_encontrado' }
@@ -60,38 +61,30 @@ export class VotacaoService {
       sessao.id,
       expiraEm,
     );
-    let enquete;
     try {
-      enquete = await this.clienteEvolution.enviarEnquete(
+      const enquete = await this.clienteEvolution.enviarEnquete(
         grupoJid,
         `Avaliação de ${resolucao.jogador.nome}`,
         OPCOES_ENQUETE,
         1,
       );
+      await this.repositorioVotacao.vincularEnquete(
+        votacao.id,
+        enquete.mensagemId,
+        enquete.segredo,
+      );
+      return {
+        tipo: 'aberta',
+        votacao: {
+          ...votacao,
+          pollMessageId: enquete.mensagemId,
+          pollMessageSecret: enquete.segredo,
+        },
+      };
     } catch {
-      return { tipo: 'aberta', votacao, enqueteNativa: false };
+      await this.repositorioVotacao.fechar(votacao.id);
+      return { tipo: 'falha_enquete' };
     }
-    await this.repositorioVotacao.vincularEnquete(votacao.id, enquete.mensagemId, enquete.segredo);
-    return {
-      tipo: 'aberta',
-      votacao: {
-        ...votacao,
-        pollMessageId: enquete.mensagemId,
-        pollMessageSecret: enquete.segredo,
-      },
-      enqueteNativa: true,
-    };
-  }
-
-  public async registrarVotoTexto(
-    grupoJid: string,
-    avaliadorJid: string,
-    estrelas: number,
-  ): Promise<ResultadoRegistroVoto> {
-    if (!Number.isInteger(estrelas) || estrelas < 1 || estrelas > 5) return { tipo: 'invalido' };
-    const votacao = await this.repositorioVotacao.buscarAtivaPorGrupo(grupoJid, this.agora());
-    if (!votacao) return { tipo: 'sem_votacao' };
-    return this.registrar(votacao, avaliadorJid, estrelas, false);
   }
 
   public async registrarVotoEnquete(

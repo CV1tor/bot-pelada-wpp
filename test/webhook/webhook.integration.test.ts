@@ -77,4 +77,36 @@ describe('webhook', () => {
       ],
     });
   });
+
+  it('interpreta votos agregados enviados por MESSAGES_UPDATE da Evolution API', () => {
+    const evento = interpretarEventoWebhook({
+      event: 'MESSAGES_UPDATE',
+      data: {
+        keyId: 'poll-1',
+        remoteJid: 'grupo@g.us',
+        pollUpdates: [
+          { name: '1 ⭐', voters: [] },
+          { name: '5 ⭐', voters: ['5522@s.whatsapp.net', '5533@s.whatsapp.net'] },
+        ],
+      },
+    });
+
+    expect(evento).toEqual({
+      tipo: 'enquete',
+      atualizacoes: [
+        {
+          grupoJid: 'grupo@g.us',
+          remetenteJid: '5522@s.whatsapp.net',
+          mensagemEnqueteId: 'poll-1',
+          opcoesSelecionadas: ['5 ⭐'],
+        },
+        {
+          grupoJid: 'grupo@g.us',
+          remetenteJid: '5533@s.whatsapp.net',
+          mensagemEnqueteId: 'poll-1',
+          opcoesSelecionadas: ['5 ⭐'],
+        },
+      ],
+    });
+  });
 });
