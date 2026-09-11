@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import { describe, expect, it, vi } from 'vitest';
 import { DispatcherComandos } from '../../src/commands/dispatcher.js';
 import type { VotacaoService } from '../../src/services/votacao.service.js';
+import type { PublicadorVotacoesExpiradas } from '../../src/services/publicador-votacoes-expiradas.js';
 import { registrarWebhook } from '../../src/webhook/webhook.controller.js';
 import { interpretarEventoWebhook } from '../../src/webhook/webhook.schema.js';
 import { criarClienteEvolutionMock } from '../helpers.js';
@@ -17,14 +18,17 @@ describe('webhook', () => {
       executar: async ({ remetenteNome }) => `Olá, ${remetenteNome}`,
     });
     const votacaoService = {
-      fecharExpiradas: vi.fn().mockResolvedValue([]),
       registrarVotoEnquete: vi.fn(),
     } as unknown as VotacaoService;
+    const publicadorVotacoesExpiradas = {
+      publicar: vi.fn().mockResolvedValue(undefined),
+    } as unknown as PublicadorVotacoesExpiradas;
     const servidor = Fastify();
     registrarWebhook(servidor, {
       grupoAutorizado: 'grupo@g.us',
       dispatcher,
       votacaoService,
+      publicadorVotacoesExpiradas,
       clienteEvolution: evolution,
     });
 

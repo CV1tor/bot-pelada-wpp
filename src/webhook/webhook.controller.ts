@@ -2,13 +2,14 @@ import type { FastifyInstance } from 'fastify';
 import type { ClienteEvolutionApi } from '../integrations/evolution-api.client.js';
 import type { DispatcherComandos } from '../commands/dispatcher.js';
 import type { VotacaoService } from '../services/votacao.service.js';
-import { formatarResultadoVotacao } from '../utils/formatar-resultado-votacao.js';
+import type { PublicadorVotacoesExpiradas } from '../services/publicador-votacoes-expiradas.js';
 import { interpretarEventoWebhook } from './webhook.schema.js';
 
 export interface DependenciasWebhook {
   grupoAutorizado: string;
   dispatcher: DispatcherComandos;
   votacaoService: VotacaoService;
+  publicadorVotacoesExpiradas: PublicadorVotacoesExpiradas;
   clienteEvolution: ClienteEvolutionApi;
 }
 
@@ -18,7 +19,7 @@ export const registrarWebhook = (
 ): void => {
   servidor.post('/webhook', async (requisicao, resposta) => {
     const evento = interpretarEventoWebhook(requisicao.body);
-    await publicarVotacoesEncerradas(dependencias);
+    await dependencias.publicadorVotacoesExpiradas.publicar();
 
     if (evento.tipo === 'mensagem') {
       const mensagem = evento.mensagem;
@@ -51,14 +52,4 @@ export const registrarWebhook = (
 
     return resposta.code(204).send();
   });
-};
-
-const publicarVotacoesEncerradas = async (dependencias: DependenciasWebhook): Promise<void> => {
-  const encerradas = await dependencias.votacaoService.fecharExpiradas();
-  for (const { votacao, resultado } of encerradas) {
-    await dependencias.clienteEvolution.enviarTexto(
-      votacao.grupoJid,
-      formatarResultadoVotacao(resultado),
-    );
-  }
 };

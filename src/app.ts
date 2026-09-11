@@ -29,8 +29,10 @@ import { RepositorioSessaoPrisma } from './repositories/sessao.repository.js';
 import { RepositorioVotacaoPrisma } from './repositories/votacao.repository.js';
 import { ListaService } from './services/lista.service.js';
 import { AgendadorResumoMensal } from './services/agendador-resumo-mensal.js';
+import { AgendadorVotacoes } from './services/agendador-votacoes.js';
 import { EstatisticasService } from './services/estatisticas.service.js';
 import { RankingService } from './services/ranking.service.js';
+import { PublicadorVotacoesExpiradas } from './services/publicador-votacoes-expiradas.js';
 import { SorteioService } from './services/sorteio.service.js';
 import { ResumoMensalService } from './services/resumo-mensal.service.js';
 import { SessaoService } from './services/sessao.service.js';
@@ -73,6 +75,13 @@ export const criarAplicacao = (
     clienteEvolution,
     repositorioSessao,
   );
+  const publicadorVotacoesExpiradas = new PublicadorVotacoesExpiradas(
+    votacaoService,
+    clienteEvolution,
+  );
+  const agendadorVotacoes = new AgendadorVotacoes(publicadorVotacoesExpiradas, (erro) =>
+    servidor.log.error(erro, 'Falha ao encerrar votações expiradas'),
+  );
   const resumoMensalService = new ResumoMensalService(
     repositorioEstatisticas,
     clienteEvolution,
@@ -103,15 +112,20 @@ export const criarAplicacao = (
   );
 
   servidor.get('/health', () => ({ status: 'ok' }));
-  servidor.addHook('onReady', () => agendadorResumoMensal.iniciar());
+  servidor.addHook('onReady', () => {
+    agendadorResumoMensal.iniciar();
+    agendadorVotacoes.iniciar();
+  });
   registrarWebhook(servidor, {
     grupoAutorizado: configuracao.whatsappGroupId,
     dispatcher,
     votacaoService,
+    publicadorVotacoesExpiradas,
     clienteEvolution,
   });
   servidor.addHook('onClose', async () => {
     agendadorResumoMensal.parar();
+    agendadorVotacoes.parar();
     await prisma.$disconnect();
   });
   return servidor;

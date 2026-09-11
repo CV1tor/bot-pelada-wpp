@@ -28,7 +28,7 @@ export type ResultadoEncerramentoVotacao =
   | { tipo: 'ambiguo'; nomes: string[] };
 
 const OPCOES_ENQUETE = ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'];
-const DURACAO_VOTACAO_EM_MILISSEGUNDOS = 3 * 24 * 60 * 60 * 1000;
+const DURACAO_VOTACAO_EM_MILISSEGUNDOS = 24 * 60 * 60 * 1000;
 
 export class VotacaoService {
   public constructor(

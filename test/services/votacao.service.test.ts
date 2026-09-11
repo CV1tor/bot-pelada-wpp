@@ -60,7 +60,7 @@ describe('VotacaoService', () => {
       'jogador-1',
       'grupo@g.us',
       'sessao-1',
-      new Date('2026-08-31T13:00:00.000Z'),
+      new Date('2026-08-29T13:00:00.000Z'),
     );
     expect(votacoes.vincularEnquete).toHaveBeenCalledWith('votacao-1', 'poll-1', 'segredo');
   });
