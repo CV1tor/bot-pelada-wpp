@@ -11,7 +11,7 @@ Bot para gerenciar uma pelada de vôlei em um grupo do WhatsApp. O backend receb
 - Confirmação e saída pelo próprio jogador, sem limite de vagas.
 - Rateio dinâmico do saldo e confirmação individual com `!paguei`.
 - Ranking que exige pelo menos três avaliações por jogador.
-- Votação por enquete nativa do WhatsApp, com `!voto N` como fallback automático.
+- Votações simultâneas por enquetes nativas do WhatsApp, com janela de 24 horas.
 - Sorteio equilibrado por snake draft, considerando a média de cada jogador.
 - Verificação de administrador diretamente nos metadados do grupo.
 - Bloqueio de mensagens oriundas de outros grupos.
@@ -91,9 +91,11 @@ docker compose up -d --force-recreate backend
 
 ## Enquete nativa
 
-`!votacao Nome` envia uma enquete com as opções de 1 a 5 estrelas, seleção única e duração de 3 dias. O bot persiste o ID e o `messageSecret` retornados. Atualizações que já tragam o nome da opção e atualizações binárias com o hash SHA-256 da opção são aceitas.
+`!votacao Nome` envia uma enquete com as opções de 1 a 5 estrelas, seleção única e janela de 24 horas. O bot persiste o ID e o `messageSecret` retornados. Atualizações agregadas da Evolution API, opções nominais e atualizações binárias com o hash SHA-256 da opção são aceitas.
 
-Se a criação da enquete falhar ou a versão instalada não entregar uma opção decodificável em `MESSAGES_UPDATE`, os participantes ainda podem votar com `!voto N`. Um jogador não pode se autoavaliar nem manter mais de um voto na mesma votação.
+O voto ocorre exclusivamente na enquete nativa. Se a criação falhar, a votação é cancelada e o administrador deve tentar novamente. Um jogador não pode se autoavaliar; ao alterar sua seleção, a avaliação anterior é atualizada.
+
+Enquetes para jogadores diferentes podem ocorrer simultaneamente. O backend correlaciona cada evento pelo ID da enquete e impede apenas a abertura duplicada para o mesmo jogador na mesma pelada. A expiração é verificada a cada minuto. O WhatsApp pode manter a enquete visualmente disponível depois do prazo, mas votos posteriores são ignorados pelo bot.
 
 O ranking reflete as avaliações persistidas e passa a exibir o jogador a partir do primeiro voto.
 
@@ -111,8 +113,7 @@ Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece
 - `!limpar confirmar`
 - `!ranking`
 - `!votacao nome`
-- `!encerrar-votacao`
-- `!voto N`
+- `!encerrar-votacao nome`
 - `!pix`
 - `!paguei`
 - `!estatisticas [nome | @contato]`

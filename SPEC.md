@@ -67,7 +67,7 @@ src/
     remover.command.ts
     ranking.command.ts
     votacao.command.ts
-    voto.command.ts           # sub-handler usado durante uma votação ativa
+    encerrar-votacao.command.ts
     pix.command.ts
     sorteio.command.ts
     ajuda.command.ts
@@ -75,6 +75,8 @@ src/
     lista.service.ts
     ranking.service.ts
     votacao.service.ts
+    publicador-votacoes-expiradas.ts
+    agendador-votacoes.ts
     sorteio.service.ts
   integrations/
     evolution-api.client.ts   # wrapper de chamadas REST à Evolution API
@@ -164,8 +166,8 @@ model VotacaoAtiva {
   iniciadaEm        DateTime @default(now())
   expiraEm          DateTime
   fechada           Boolean  @default(false)
-  pollMessageId     String?  // preenchido somente se a Fase 2 (enquete nativa) estiver ativa
-  pollMessageSecret String?  // necessário para decifrar os votos da enquete nativa (ver seção 7)
+  pollMessageId     String?  // identifica a enquete nativa correspondente
+  pollMessageSecret String?  // segredo retornado pela Evolution API ao criar a enquete
   sessaoId          String?
 }
 
@@ -253,22 +255,19 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
   ```
 
 ### `!votacao [nome]`
-- **Descrição**: abre uma votação de 1 a 5 estrelas para o jogador informado.
-- **Implementação em duas fases** — construir a Fase 1 primeiro; só avançar para a Fase 2 depois de validar o pré-requisito descrito nela (ver roadmap, seção 12).
+- **Descrição**: abre uma enquete nativa do WhatsApp, de 1 a 5 estrelas, para o jogador informado.
+- Resolve o `Player` pelo nome e chama `POST /message/sendPoll/{instance}` com as opções `["1 ⭐", "2 ⭐", "3 ⭐", "4 ⭐", "5 ⭐"]` e `selectableCount: 1`.
+- A votação expira 24 horas após sua criação. Um agendador verifica expirações a cada minuto, consolida as avaliações e publica o resultado.
+- O fluxo é exclusivamente nativo: se a Evolution API não criar a enquete, a votação é cancelada e nenhum comando textual alternativo é disponibilizado.
+- Persistir `pollMessageId` e `pollMessageSecret`. Eventos `MESSAGES_UPDATE` são correlacionados pelo ID da enquete e podem trazer opções agregadas no formato `{ name, voters[] }`.
+- Várias votações de jogadores diferentes podem permanecer abertas simultaneamente. Não pode existir mais de uma votação aberta para o mesmo jogador na mesma pelada.
+- Um jogador não pode se autoavaliar. Uma nova seleção na mesma enquete substitui sua seleção anterior.
+- O prazo é controlado pelo backend; caso a enquete continue visualmente aberta no WhatsApp, votos recebidos depois da expiração são ignorados.
 
-**Fase 1 — MVP via texto (`!voto N`)**
-  1. Resolve o `Player` pelo nome (mesmo matching do `!remover`).
-  2. Cria um registro em `VotacaoAtiva` com `expiraEm = now + 3 dias`.
-  3. Publica no grupo: `Vote de 1 a 5 estrelas para {nome} respondendo "!voto N" até {data e hora}`.
-  4. Enquanto a votação estiver ativa, o dispatcher intercepta mensagens `!voto N` de qualquer participante e grava uma `Avaliacao` (uma por avaliador por votação — usar chave de idempotência avaliador+avaliado+janela de tempo).
-  5. Ao expirar (checado a cada novo evento recebido, ou via job agendado), marca `fechada = true` e publica o resultado consolidado.
-- **Validações**: `N` deve ser inteiro entre 1 e 5; um jogador não pode votar em si mesmo.
-
-**Fase 2 — Enquete nativa do WhatsApp (opcional, pós-validação)**
-- Substituir o passo 3 por uma chamada `POST /message/sendPoll/{instance}` com as opções `["1 ⭐", "2 ⭐", "3 ⭐", "4 ⭐", "5 ⭐"]` e `selectableCount: 1`.
-- **Pré-requisito obrigatório antes de migrar**: confirmar, na versão da Evolution API em uso, que o webhook entrega o evento de atualização da enquete (`messages.update` / `POLLS_UPDATE`) já com os votos decifrados — ou implementar a decriptação manualmente a partir do `messageSecret` retornado na criação da enquete. Enquetes do WhatsApp são E2E-criptografadas; sem esse dado não é possível saber quem votou em quê.
-- Persistir `pollMessageId` e `pollMessageSecret` no registro de `VotacaoAtiva` no momento da criação da enquete — são necessários para decifrar as atualizações de voto recebidas depois.
-- Manter o fluxo por texto (`!voto N`) como fallback automático caso a decriptação da enquete falhe ou não esteja disponível na versão instalada da Evolution API.
+### `!encerrar-votacao [nome]`
+- **Restrito a admin.**
+- Encerra antecipadamente a votação ativa do jogador informado e publica o resultado consolidado.
+- O nome é obrigatório porque mais de uma votação pode estar ativa no grupo.
 
 ### `!pix`
 - **Descrição**: envia a chave pix da pelada (valor fixo, configurável via variável de ambiente `PIX_KEY` e `PIX_NOME`).
@@ -302,7 +301,7 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 | `!time [numero]` | reenvia composição de um time específico |
 | `!trocar [nome1] [nome2]` | troca dois jogadores entre times já sorteados |
 | `!regras` | texto fixo com as regras da pelada |
-| `!votacao` (fase 2) | migrar de `!voto N` por texto para enquete nativa do WhatsApp, após validar suporte a decriptação de votos na versão da Evolution API em uso (ver seção 7) |
+| `!encerrar-votacao [nome]` | encerra antecipadamente uma enquete e publica seu resultado |
 
 ## 9. Regras de negócio transversais
 
@@ -312,7 +311,8 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 - **Pagamento**: o custo total é fixado na abertura; os valores já pagos são imutáveis e o saldo é redistribuído apenas entre confirmados pendentes.
 - **Resumo mensal**: a cada hora, o processo tenta publicar uma única vez o resumo do mês anterior. Votações ainda válidas adiam a publicação.
 - **Resolução de nome por texto livre**: centralizar em uma função utilitária (`resolvePlayerByName`) usada por `!remover`, `!votacao`, `!time`, `!trocar` — normaliza acentos/maiúsculas e faz match parcial.
-- **Idempotência de voto**: um jogador não pode votar duas vezes na mesma votação ativa.
+- **Votações simultâneas**: jogadores diferentes podem ter enquetes abertas ao mesmo tempo; a combinação pelada+jogador deve ser única enquanto a votação estiver aberta.
+- **Idempotência de voto**: existe uma avaliação por votante em cada enquete; alterações na seleção atualizam essa avaliação.
 
 ## 10. Variáveis de ambiente (`.env.example`)
 
@@ -369,12 +369,12 @@ volumes:
 4. **Dispatcher de comandos**: implementar o roteamento genérico `!comando arg1 arg2` → handler, com testes unitários cobrindo parsing de comando e argumentos.
 5. **Comandos de leitura**: `!lista`, `!ajuda`, `!pix` (sem efeitos colaterais, bons para validar o pipeline ponta a ponta).
 6. **Comandos de escrita simples**: `!adicionar`, `!remover`, `!limpar` (com checagem de admin).
-7. **Ranking e votação (Fase 1 — texto)**: `!ranking`, `!votacao`, `!voto` — incluindo o mecanismo de sessão de votação com expiração. Usar exclusivamente o fluxo por texto (`!voto N`) nesta etapa.
+7. **Ranking e votação nativa**: `!ranking`, `!votacao` e `!encerrar-votacao` — incluindo correlação pelo ID da enquete, votações simultâneas e expiração em 24 horas.
 8. **Sorteio**: `!sorteio` com o algoritmo de snake draft e persistência dos times.
 9. **Testes de integração**: simular payloads de webhook reais da Evolution API para cada comando.
 10. **Deploy**: finalizar Docker Compose, documentar passo a passo de configuração da instância na Evolution API (criar instância, parear QR code, configurar webhook apontando para o backend).
 11. **Fase 2 (backlog)**: implementar comandos da seção 8 conforme prioridade do time.
-12. **Votação — Fase 2 (opcional)**: só iniciar após o item 11. Validar em ambiente de teste se a versão da Evolution API entrega votos de enquete decifrados no webhook; em caso positivo, migrar `!votacao` para `sendPoll` conforme especificado na seção 7, mantendo o texto como fallback.
+12. **Validação ponta a ponta**: capturar um evento real de resposta de enquete da versão implantada da Evolution API e mantê-lo como fixture de integração.
 
 ## 13. Critérios de aceite
 
@@ -382,4 +382,6 @@ volumes:
 - Nenhum comando restrito a admin deve ser executável por não-admin, mesmo com payload manipulado.
 - O bot não deve responder a mensagens fora do `WHATSAPP_GROUP_ID` configurado.
 - `!sorteio` deve produzir times com diferença de soma de rating menor ou igual à diferença do maior rating individual (garantindo equilíbrio razoável).
+- A falha ao criar uma enquete não deve deixar votação ativa nem habilitar votação por texto.
+- Votações simultâneas devem ser correlacionadas exclusivamente pelo ID da enquete correspondente.
 - `docker compose up` sobe o ambiente completo (db + evolution-api + backend) sem passos manuais além de preencher o `.env`.
