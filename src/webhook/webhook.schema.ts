@@ -127,7 +127,11 @@ const interpretarEnquete = (corpo: unknown): EventoWebhookInterpretado => {
   if (!dados) return { tipo: 'ignorado' };
   const chave = objetoNoCaminho(dados, ['key']);
   const grupoJid = textoNoCaminho(dados, [['remoteJid']]) || textoNoCaminho(chave, [['remoteJid']]);
-  const mensagemEnqueteIdAgregada = textoNoCaminho(dados, [['keyId'], ['messageId']]);
+  const mensagemEnqueteIdAgregada = textoNoCaminho(dados, [
+    ['keyId'],
+    ['messageId'],
+    ['message', 'pollUpdateMessage', 'pollCreationMessageKey', 'id'],
+  ]);
   const atualizacoesAgregadas = valorNoCaminho(dados, ['pollUpdates']);
   if (mensagemEnqueteIdAgregada && Array.isArray(atualizacoesAgregadas)) {
     const atualizacoes = atualizacoesAgregadas.flatMap((opcao): AtualizacaoEnquete[] => {
@@ -185,7 +189,10 @@ export const interpretarEventoWebhook = (corpo: unknown): EventoWebhookInterpret
   const evento = textoNoCaminho(corpo, [['event']])
     .toLocaleLowerCase('en-US')
     .replaceAll('_', '.');
-  if (evento.includes('messages.upsert')) return interpretarMensagem(corpo);
+  if (evento.includes('messages.upsert')) {
+    const enquete = interpretarEnquete(corpo);
+    return enquete.tipo === 'enquete' ? enquete : interpretarMensagem(corpo);
+  }
   if (evento.includes('poll') || evento.includes('messages.update'))
     return interpretarEnquete(corpo);
   return { tipo: 'ignorado' };

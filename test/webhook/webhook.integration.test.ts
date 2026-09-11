@@ -113,4 +113,39 @@ describe('webhook', () => {
       ],
     });
   });
+
+  it('interpreta votos agregados enviados em pollUpdateMessage de MESSAGES_UPSERT', () => {
+    const evento = interpretarEventoWebhook({
+      event: 'MESSAGES_UPSERT',
+      data: {
+        key: {
+          remoteJid: 'grupo@g.us',
+          participant: '5522@lid',
+          fromMe: true,
+        },
+        message: {
+          pollUpdateMessage: {
+            pollCreationMessageKey: { id: 'poll-1' },
+            vote: { selectedOptions: ['4 ⭐'] },
+          },
+        },
+        pollUpdates: [
+          { name: '1 ⭐', voters: [] },
+          { name: '4 ⭐', voters: ['5522@lid'] },
+        ],
+      },
+    });
+
+    expect(evento).toEqual({
+      tipo: 'enquete',
+      atualizacoes: [
+        {
+          grupoJid: 'grupo@g.us',
+          remetenteJid: '5522@lid',
+          mensagemEnqueteId: 'poll-1',
+          opcoesSelecionadas: ['4 ⭐'],
+        },
+      ],
+    });
+  });
 });
