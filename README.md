@@ -91,7 +91,7 @@ docker compose up -d --force-recreate backend
 
 ## Enquete nativa
 
-`!votacao Nome` envia uma enquete com as opções de 1 a 5 estrelas, seleção única e janela de 24 horas. O bot persiste o ID e o `messageSecret` retornados. Atualizações agregadas da Evolution API, opções nominais e atualizações binárias com o hash SHA-256 da opção são aceitas.
+`!votacao Nome` envia uma enquete com as opções de 1 a 5 estrelas, seleção única e janela de 24 horas. `!votacao todos` abre uma enquete para cada nome confirmado na lista. O bot persiste o ID e o `messageSecret` retornados. Atualizações agregadas da Evolution API, opções nominais e atualizações binárias com o hash SHA-256 da opção são aceitas.
 
 O voto ocorre exclusivamente na enquete nativa. Se a criação falhar, a votação é cancelada e o administrador deve tentar novamente. Um jogador não pode se autoavaliar; ao alterar sua seleção, a avaliação anterior é atualizada.
 
@@ -112,7 +112,7 @@ Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece
 - `!remover nome`
 - `!limpar confirmar`
 - `!ranking`
-- `!votacao nome`
+- `!votacao nome | todos`
 - `!encerrar-votacao nome`
 - `!pix`
 - `!paguei`

@@ -254,8 +254,9 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
   2. João ⭐ 4.5 (10 avaliações)
   ```
 
-### `!votacao [nome]`
-- **Descrição**: abre uma enquete nativa do WhatsApp, de 1 a 5 estrelas, para o jogador informado.
+### `!votacao [nome | todos]`
+- **Descrição**: abre uma enquete nativa do WhatsApp, de 1 a 5 estrelas, para o jogador informado. Com `todos`, abre uma enquete para cada jogador confirmado na lista da pelada aberta.
+- A abertura para todos preserva votações que já estejam ativas e continua processando os demais jogadores quando uma enquete falha.
 - Resolve o `Player` pelo nome e chama `POST /message/sendPoll/{instance}` com as opções `["1 ⭐", "2 ⭐", "3 ⭐", "4 ⭐", "5 ⭐"]` e `selectableCount: 1`.
 - A votação expira 24 horas após sua criação. Um agendador verifica expirações a cada minuto, consolida as avaliações e publica o resultado.
 - O fluxo é exclusivamente nativo: se a Evolution API não criar a enquete, a votação é cancelada e nenhum comando textual alternativo é disponibilizado.
