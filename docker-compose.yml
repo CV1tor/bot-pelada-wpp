@@ -27,7 +27,7 @@ services:
       - redis_data:/data
 
   evolution-api:
-    image: evoapicloud/evolution-api:v2.3.0
+    image: evoapicloud/evolution-api:v2.3.7
     restart: unless-stopped
     depends_on:
       db:
