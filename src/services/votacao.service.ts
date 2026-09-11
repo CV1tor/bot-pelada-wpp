@@ -1,5 +1,5 @@
 import type { ClienteEvolutionApi } from '../integrations/evolution-api.client.js';
-import type { ResultadoVotacao, Votacao } from '../models/types.js';
+import type { Jogador, ResultadoVotacao, SessaoAberta, Votacao } from '../models/types.js';
 import type { RepositorioAvaliacao } from '../repositories/avaliacao.repository.js';
 import type { RepositorioJogador } from '../repositories/player.repository.js';
 import type { RepositorioVotacao } from '../repositories/votacao.repository.js';
@@ -13,6 +13,16 @@ export type ResultadoInicioVotacao =
   | { tipo: 'sem_sessao' }
   | { tipo: 'nao_encontrado' }
   | { tipo: 'ambiguo'; nomes: string[] };
+
+export type ResultadoInicioVotacoes =
+  | {
+      tipo: 'processada';
+      abertas: Votacao[];
+      existentes: Votacao[];
+      falhas: Jogador[];
+    }
+  | { tipo: 'sem_sessao' }
+  | { tipo: 'sem_participantes' };
 
 export type ResultadoRegistroVoto =
   | { tipo: 'registrado'; votacao: Votacao; estrelas: number }
@@ -53,23 +63,48 @@ export class VotacaoService {
       };
     }
 
+    return this.iniciarParaJogador(resolucao.jogador, sessao, grupoJid);
+  }
+
+  public async iniciarTodos(grupoJid: string): Promise<ResultadoInicioVotacoes> {
+    const sessao = await this.repositorioSessao.buscarAberta();
+    if (!sessao) return { tipo: 'sem_sessao' };
+    if (!sessao.participantes.length) return { tipo: 'sem_participantes' };
+
+    const resultado: Extract<ResultadoInicioVotacoes, { tipo: 'processada' }> = {
+      tipo: 'processada',
+      abertas: [],
+      existentes: [],
+      falhas: [],
+    };
+
+    for (const participante of sessao.participantes) {
+      const inicio = await this.iniciarParaJogador(participante, sessao, grupoJid);
+      if (inicio.tipo === 'aberta') resultado.abertas.push(inicio.votacao);
+      if (inicio.tipo === 'ja_existe') resultado.existentes.push(inicio.votacao);
+      if (inicio.tipo === 'falha_enquete') resultado.falhas.push(participante);
+    }
+
+    return resultado;
+  }
+
+  private async iniciarParaJogador(
+    jogador: Jogador,
+    sessao: SessaoAberta,
+    grupoJid: string,
+  ): Promise<Extract<ResultadoInicioVotacao, { tipo: 'aberta' | 'falha_enquete' | 'ja_existe' }>> {
     const ativa = await this.repositorioVotacao.buscarAtivaPorJogadorNaSessao(
-      resolucao.jogador.id,
+      jogador.id,
       sessao.id,
       this.agora(),
     );
     if (ativa) return { tipo: 'ja_existe', votacao: ativa };
 
     const expiraEm = new Date(this.agora().getTime() + DURACAO_VOTACAO_EM_MILISSEGUNDOS);
-    const votacao = await this.repositorioVotacao.criar(
-      resolucao.jogador.id,
-      grupoJid,
-      sessao.id,
-      expiraEm,
-    );
+    const votacao = await this.repositorioVotacao.criar(jogador.id, grupoJid, sessao.id, expiraEm);
     if (!votacao) {
       const criadaConcorrentemente = await this.repositorioVotacao.buscarAtivaPorJogadorNaSessao(
-        resolucao.jogador.id,
+        jogador.id,
         sessao.id,
         this.agora(),
       );
@@ -79,7 +114,7 @@ export class VotacaoService {
     try {
       const enquete = await this.clienteEvolution.enviarEnquete(
         grupoJid,
-        `Avaliação de ${resolucao.jogador.nome}`,
+        `Avaliação de ${jogador.nome}`,
         OPCOES_ENQUETE,
         1,
       );

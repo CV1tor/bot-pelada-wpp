@@ -98,6 +98,36 @@ describe('handlers de comandos', () => {
     );
   });
 
+  it('!votacao todos abre enquetes para os confirmados e resume o processamento', async () => {
+    const iniciarTodos = vi.fn().mockResolvedValue({
+      tipo: 'processada',
+      abertas: [votacao()],
+      existentes: [{ ...votacao(), id: 'votacao-2' }],
+      falhas: [jogador('jogador-3', 'Pedro')],
+    });
+    const servico = { iniciarTodos } as unknown as VotacaoService;
+
+    const resposta = await new VotacaoCommand(servico).executar({
+      ...contexto,
+      argumentos: ['todos'],
+    });
+
+    expect(iniciarTodos).toHaveBeenCalledWith(contexto.grupoJid);
+    expect(resposta).toContain('1 enquete(s) aberta(s)');
+    expect(resposta).toContain('1 já estava(m) ativa(s)');
+    expect(resposta).toContain('Falha ao abrir 1: Pedro');
+  });
+
+  it('!votacao todos informa quando não há confirmados', async () => {
+    const servico = {
+      iniciarTodos: vi.fn().mockResolvedValue({ tipo: 'sem_participantes' }),
+    } as unknown as VotacaoService;
+
+    await expect(
+      new VotacaoCommand(servico).executar({ ...contexto, argumentos: ['todos'] }),
+    ).resolves.toContain('Não há jogadores confirmados');
+  });
+
   it('!encerrar-votacao encerra e publica o resultado', async () => {
     const servico = {
       encerrarAtiva: vi.fn().mockResolvedValue({
