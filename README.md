@@ -115,7 +115,7 @@ Use `!ajuda` no grupo para obter a relação gerada dinamicamente. O MVP oferece
 - `!votacao [nome | todos]`
 - `!encerrar-votacao [nome | todas]`
 - `!pix`
-- `!paguei`
+- `!paguei [nome]`
 - `!estatisticas [nome | @contato]`
 - `!sorteio [quantidade]`
 - `!ajuda`
@@ -140,7 +140,7 @@ primeiro pagamento, a próxima parcela é calculada dividindo o saldo restante e
 participantes confirmados ainda pendentes. Dessa forma, entradas e saídas atualizam o rateio sem
 alterar valores já pagos.
 
-`!paguei` registra imediatamente o pagamento do próprio jogador e é idempotente. `!lista` mostra
+`!paguei` registra imediatamente o pagamento do próprio jogador; com um nome, registra para o participante correspondente. O comando é idempotente. `!lista` mostra
 quem pagou, quem está pendente, a parcela atual e o saldo da sessão.
 
 Ao final, o administrador executa:

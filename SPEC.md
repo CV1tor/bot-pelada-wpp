@@ -206,8 +206,9 @@ Convenção geral: comandos que alteram estado (`!limpar`, `!remover`, `!sorteio
 - Ambos são idempotentes e não exigem permissão administrativa.
 - Sair não apaga o cadastro, o histórico nem um pagamento já registrado.
 
-### `!paguei`
-- Registra imediatamente o pagamento do próprio jogador confirmado.
+### `!paguei [nome]`
+- Sem argumento, registra imediatamente o pagamento do próprio jogador confirmado.
+- Com um nome, registra o pagamento do participante confirmado correspondente.
 - O valor é o saldo restante dividido entre os participantes confirmados ainda pendentes.
 - Entradas e saídas posteriores recalculam apenas as parcelas ainda não pagas.
 - Repetir o comando não registra nem desconta um segundo pagamento.

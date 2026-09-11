@@ -48,6 +48,22 @@ describe('comandos da pelada', () => {
     const comando = new PagueiCommand({ pagar } as unknown as SessaoService);
 
     await expect(comando.executar(contexto)).resolves.toContain('R$ 180,00');
+    expect(pagar).toHaveBeenCalledWith(contexto.remetenteJid, '');
+  });
+
+  it('!paguei aceita o nome de outro participante', async () => {
+    const pagar = vi.fn().mockResolvedValue({
+      tipo: 'registrado',
+      jogador: jogador('jogador-2', 'Carlos'),
+      valorPagoCentavos: 2000,
+      situacao: { saldoCentavos: 18000 },
+    });
+    const comando = new PagueiCommand({ pagar } as unknown as SessaoService);
+
+    await expect(comando.executar({ ...contexto, argumentos: ['Carlos'] })).resolves.toContain(
+      'Pagamento de Carlos',
+    );
+    expect(pagar).toHaveBeenCalledWith(contexto.remetenteJid, 'Carlos');
   });
 
   it('!estatisticas mostra somente os indicadores definidos', async () => {

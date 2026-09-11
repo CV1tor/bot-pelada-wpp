@@ -4,19 +4,28 @@ import { formatarMoeda } from '../utils/formatacao.js';
 
 export class PagueiCommand implements Comando {
   public readonly nome = 'paguei';
-  public readonly descricao = 'confirma seu pagamento e atualiza o saldo da pelada';
+  public readonly descricao = 'confirma o pagamento próprio ou de um participante pelo nome';
 
   public constructor(private readonly sessaoService: SessaoService) {}
 
   public async executar(contexto: ContextoComando): Promise<string> {
-    const resultado = await this.sessaoService.pagar(contexto.remetenteJid);
+    const nome = contexto.argumentos.join(' ');
+    const resultado = await this.sessaoService.pagar(contexto.remetenteJid, nome);
     if (resultado.tipo === 'sem_sessao') return 'Não há uma pelada aberta.';
+    if (resultado.tipo === 'nao_encontrado') {
+      return `Nenhum participante confirmado encontrado para “${nome}”.`;
+    }
+    if (resultado.tipo === 'ambiguo') {
+      return `Encontrei mais de uma pessoa: ${resultado.jogadores.map((jogador) => jogador.nome).join(', ')}. Seja mais específico.`;
+    }
     if (resultado.tipo === 'jogador_desconhecido' || resultado.tipo === 'nao_confirmado') {
       return 'Confirme sua presença com !confirmar antes de registrar o pagamento.';
     }
     if (resultado.tipo === 'ja_pago') {
-      return `ℹ️ Seu pagamento de ${formatarMoeda(resultado.valorPagoCentavos)} já estava registrado.`;
+      const titular = nome ? `O pagamento de ${resultado.jogador.nome}` : 'Seu pagamento';
+      return `ℹ️ ${titular} de ${formatarMoeda(resultado.valorPagoCentavos)} já estava registrado.`;
     }
-    return `✅ Pagamento de ${formatarMoeda(resultado.valorPagoCentavos)} registrado.\n⏳ Saldo pendente: ${formatarMoeda(resultado.situacao.saldoCentavos)}`;
+    const titular = nome ? ` de ${resultado.jogador.nome}` : '';
+    return `✅ Pagamento${titular} de ${formatarMoeda(resultado.valorPagoCentavos)} registrado.\n⏳ Saldo pendente: ${formatarMoeda(resultado.situacao.saldoCentavos)}`;
   }
 }

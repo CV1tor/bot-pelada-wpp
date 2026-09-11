@@ -1,9 +1,10 @@
-import type { SessaoAberta, SituacaoFinanceira } from '../models/types.js';
+import type { Jogador, SessaoAberta, SituacaoFinanceira } from '../models/types.js';
 import type { RepositorioJogador } from '../repositories/player.repository.js';
 import type {
   RepositorioSessao,
   ResultadoPagamentoRepositorio,
 } from '../repositories/sessao.repository.js';
+import { resolverJogadorPorNome } from '../utils/resolver-jogador.js';
 
 export type ResultadoAberturaSessao =
   | { tipo: 'aberta'; sessao: SessaoAberta }
@@ -14,9 +15,11 @@ export type ResultadoEncerramentoSessao =
   | { tipo: 'sem_sessao' };
 
 export type ResultadoPagamento =
-  | ResultadoPagamentoRepositorio
+  | (ResultadoPagamentoRepositorio & { jogador: Jogador })
   | { tipo: 'sem_sessao' }
-  | { tipo: 'jogador_desconhecido' };
+  | { tipo: 'jogador_desconhecido' }
+  | { tipo: 'nao_encontrado' }
+  | { tipo: 'ambiguo'; jogadores: Jogador[] };
 
 export class SessaoService {
   public constructor(
@@ -45,11 +48,29 @@ export class SessaoService {
     return { tipo: 'encerrada', quantidadePresentes, situacao };
   }
 
-  public async pagar(jid: string): Promise<ResultadoPagamento> {
+  public async pagar(jid: string, nome = ''): Promise<ResultadoPagamento> {
     const sessao = await this.repositorioSessao.buscarAberta();
     if (!sessao) return { tipo: 'sem_sessao' };
+
+    const resolucao = nome
+      ? resolverJogadorPorNome(sessao.participantes, nome)
+      : await this.resolverJogadorPorJid(jid);
+    if (resolucao.tipo !== 'encontrado') return resolucao;
+
+    const jogador = resolucao.jogador;
+    const resultado = await this.repositorioSessao.registrarPagamento(
+      sessao.id,
+      jogador.id,
+      this.agora(),
+    );
+    return { ...resultado, jogador };
+  }
+
+  private async resolverJogadorPorJid(
+    jid: string,
+  ): Promise<{ tipo: 'encontrado'; jogador: Jogador } | { tipo: 'jogador_desconhecido' }> {
     const jogador = await this.repositorioJogador.buscarPorJid(jid);
     if (!jogador) return { tipo: 'jogador_desconhecido' };
-    return this.repositorioSessao.registrarPagamento(sessao.id, jogador.id, this.agora());
+    return { tipo: 'encontrado', jogador };
   }
 }

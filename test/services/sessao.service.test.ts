@@ -91,4 +91,64 @@ describe('SessaoService', () => {
     });
     expect(sessoes.registrarPagamento).toHaveBeenCalledWith('sessao-1', 'jogador-1', agora);
   });
+
+  it('registra o pagamento de um participante confirmado pelo nome', async () => {
+    const participante = {
+      ...jogador('jogador-2', 'Carlos Eduardo', '5522@s.whatsapp.net'),
+      confirmadoEm: agora,
+      canceladoEm: null,
+      presente: false,
+      pagoEm: null,
+      valorPagoCentavos: null,
+    };
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
+      id: 'sessao-1',
+      data: dataPelada,
+      valorTotalCentavos: 20000,
+      participantes: [participante],
+    });
+    vi.mocked(sessoes.registrarPagamento).mockResolvedValue({
+      tipo: 'registrado',
+      valorPagoCentavos: 2000,
+      situacao: {
+        valorTotalCentavos: 20000,
+        valorRecebidoCentavos: 2000,
+        saldoCentavos: 18000,
+        quantidadePendentes: 9,
+        valorIndividualCentavos: 2000,
+      },
+    });
+
+    await expect(servico.pagar('5511@s.whatsapp.net', 'carlos')).resolves.toMatchObject({
+      tipo: 'registrado',
+      jogador: participante,
+    });
+    expect(jogadores.buscarPorJid).not.toHaveBeenCalled();
+    expect(sessoes.registrarPagamento).toHaveBeenCalledWith('sessao-1', 'jogador-2', agora);
+  });
+
+  it('não registra pagamento quando o nome é ambíguo', async () => {
+    const criarParticipante = (id: string, nome: string) => ({
+      ...jogador(id, nome),
+      confirmadoEm: agora,
+      canceladoEm: null,
+      presente: false,
+      pagoEm: null,
+      valorPagoCentavos: null,
+    });
+    vi.mocked(sessoes.buscarAberta).mockResolvedValue({
+      id: 'sessao-1',
+      data: dataPelada,
+      valorTotalCentavos: 20000,
+      participantes: [
+        criarParticipante('jogador-2', 'Carlos Eduardo'),
+        criarParticipante('jogador-3', 'Carlos Alberto'),
+      ],
+    });
+
+    await expect(servico.pagar('5511@s.whatsapp.net', 'Carlos')).resolves.toMatchObject({
+      tipo: 'ambiguo',
+    });
+    expect(sessoes.registrarPagamento).not.toHaveBeenCalled();
+  });
 });
