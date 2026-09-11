@@ -40,7 +40,7 @@ describe('VotacaoService', () => {
   });
 
   it('abre enquete nativa e persiste ID e segredo', async () => {
-    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(null);
+    vi.mocked(votacoes.buscarAtivaPorJogadorNaSessao).mockResolvedValue(null);
     vi.mocked(votacoes.criar).mockResolvedValue(votacao());
     vi.mocked(evolution.enviarEnquete).mockResolvedValue({
       mensagemId: 'poll-1',
@@ -66,7 +66,7 @@ describe('VotacaoService', () => {
   });
 
   it('cancela a votação quando a enquete nativa falha', async () => {
-    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(null);
+    vi.mocked(votacoes.buscarAtivaPorJogadorNaSessao).mockResolvedValue(null);
     vi.mocked(votacoes.criar).mockResolvedValue(votacao());
     vi.mocked(evolution.enviarEnquete).mockRejectedValue(new Error('indisponível'));
 
@@ -74,6 +74,27 @@ describe('VotacaoService', () => {
       tipo: 'falha_enquete',
     });
     expect(votacoes.fechar).toHaveBeenCalledWith('votacao-1');
+  });
+
+  it('permite abrir votações simultâneas para jogadores diferentes', async () => {
+    vi.mocked(votacoes.buscarAtivaPorJogadorNaSessao).mockResolvedValue(null);
+    vi.mocked(votacoes.criar).mockResolvedValue(votacao());
+    vi.mocked(evolution.enviarEnquete).mockResolvedValue({ mensagemId: 'poll-1', segredo: null });
+
+    await expect(criarServico().iniciar('João', 'grupo@g.us')).resolves.toMatchObject({
+      tipo: 'aberta',
+    });
+
+    expect(votacoes.listarAtivasPorGrupo).not.toHaveBeenCalled();
+  });
+
+  it('impede outra votação do mesmo jogador na mesma pelada', async () => {
+    vi.mocked(votacoes.buscarAtivaPorJogadorNaSessao).mockResolvedValue(votacao());
+
+    await expect(criarServico().iniciar('João', 'grupo@g.us')).resolves.toMatchObject({
+      tipo: 'ja_existe',
+    });
+    expect(evolution.enviarEnquete).not.toHaveBeenCalled();
   });
 
   it('registra opção recebida pela enquete e permite atualizar a seleção', async () => {
@@ -125,13 +146,13 @@ describe('VotacaoService', () => {
   });
 
   it('encerra votação ativa imediatamente e consolida o resultado', async () => {
-    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(votacao());
+    vi.mocked(votacoes.listarAtivasPorGrupo).mockResolvedValue([votacao()]);
     vi.mocked(votacoes.fechar).mockResolvedValue(true);
     vi.mocked(avaliacoes.obterResultado).mockResolvedValue({ media: 4, total: 3 });
 
-    const resultado = await criarServico().encerrarAtiva('grupo@g.us');
+    const resultado = await criarServico().encerrarAtiva('João', 'grupo@g.us');
 
-    expect(votacoes.buscarAtivaPorGrupo).toHaveBeenCalledWith('grupo@g.us', agora);
+    expect(votacoes.listarAtivasPorGrupo).toHaveBeenCalledWith('grupo@g.us', agora);
     expect(votacoes.fechar).toHaveBeenCalledWith('votacao-1');
     expect(resultado).toMatchObject({
       tipo: 'encerrada',
@@ -141,10 +162,10 @@ describe('VotacaoService', () => {
   });
 
   it('não consolida novamente uma votação encerrada concorrentemente', async () => {
-    vi.mocked(votacoes.buscarAtivaPorGrupo).mockResolvedValue(votacao());
+    vi.mocked(votacoes.listarAtivasPorGrupo).mockResolvedValue([votacao()]);
     vi.mocked(votacoes.fechar).mockResolvedValue(false);
 
-    await expect(criarServico().encerrarAtiva('grupo@g.us')).resolves.toEqual({
+    await expect(criarServico().encerrarAtiva('João', 'grupo@g.us')).resolves.toEqual({
       tipo: 'sem_votacao',
     });
     expect(avaliacoes.obterResultado).not.toHaveBeenCalled();

@@ -109,8 +109,10 @@ describe('handlers de comandos', () => {
     const comando = new EncerrarVotacaoCommand(servico);
 
     expect(comando.restritoAAdministrador).toBe(true);
-    await expect(comando.executar(contexto)).resolves.toContain('média 4.5 ⭐ em 2 voto(s)');
-    expect(servico.encerrarAtiva).toHaveBeenCalledWith(contexto.grupoJid);
+    await expect(comando.executar({ ...contexto, argumentos: ['João'] })).resolves.toContain(
+      'média 4.5 ⭐ em 2 voto(s)',
+    );
+    expect(servico.encerrarAtiva).toHaveBeenCalledWith('João', contexto.grupoJid);
   });
 
   it('!encerrar-votacao informa quando não existe votação ativa', async () => {
@@ -118,9 +120,9 @@ describe('handlers de comandos', () => {
       encerrarAtiva: vi.fn().mockResolvedValue({ tipo: 'sem_votacao' }),
     } as unknown as VotacaoService;
 
-    await expect(new EncerrarVotacaoCommand(servico).executar(contexto)).resolves.toContain(
-      'Não há votação ativa',
-    );
+    await expect(
+      new EncerrarVotacaoCommand(servico).executar({ ...contexto, argumentos: ['João'] }),
+    ).resolves.toContain('Não há votação ativa para “João”');
   });
 
   it('!pix usa a configuração', async () => {

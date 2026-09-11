@@ -67,7 +67,8 @@ export const criarRepositorioAvaliacaoMock = (): RepositorioAvaliacao => ({
 export const criarRepositorioVotacaoMock = (): RepositorioVotacao => ({
   criar: vi.fn<RepositorioVotacao['criar']>(),
   vincularEnquete: vi.fn<RepositorioVotacao['vincularEnquete']>(),
-  buscarAtivaPorGrupo: vi.fn<RepositorioVotacao['buscarAtivaPorGrupo']>(),
+  buscarAtivaPorJogadorNaSessao: vi.fn<RepositorioVotacao['buscarAtivaPorJogadorNaSessao']>(),
+  listarAtivasPorGrupo: vi.fn<RepositorioVotacao['listarAtivasPorGrupo']>(),
   buscarPorMensagemEnquete: vi.fn<RepositorioVotacao['buscarPorMensagemEnquete']>(),
   listarExpiradas: vi.fn<RepositorioVotacao['listarExpiradas']>(),
   fechar: vi.fn<RepositorioVotacao['fechar']>(),

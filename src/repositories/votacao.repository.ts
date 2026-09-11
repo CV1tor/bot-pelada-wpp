@@ -1,10 +1,20 @@
-import type { PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 import type { Votacao } from '../models/types.js';
 
 export interface RepositorioVotacao {
-  criar(playerId: string, grupoJid: string, sessaoId: string, expiraEm: Date): Promise<Votacao>;
+  criar(
+    playerId: string,
+    grupoJid: string,
+    sessaoId: string,
+    expiraEm: Date,
+  ): Promise<Votacao | null>;
   vincularEnquete(id: string, mensagemId: string, segredo: string | null): Promise<void>;
-  buscarAtivaPorGrupo(grupoJid: string, agora: Date): Promise<Votacao | null>;
+  buscarAtivaPorJogadorNaSessao(
+    playerId: string,
+    sessaoId: string,
+    agora: Date,
+  ): Promise<Votacao | null>;
+  listarAtivasPorGrupo(grupoJid: string, agora: Date): Promise<Votacao[]>;
   buscarPorMensagemEnquete(mensagemId: string): Promise<Votacao | null>;
   listarExpiradas(agora: Date): Promise<Votacao[]>;
   fechar(id: string): Promise<boolean>;
@@ -29,12 +39,18 @@ export class RepositorioVotacaoPrisma implements RepositorioVotacao {
     grupoJid: string,
     sessaoId: string,
     expiraEm: Date,
-  ): Promise<Votacao> {
-    const votacao = await this.prisma.votacaoAtiva.create({
-      data: { playerId, grupoJid, sessaoId, expiraEm },
-      select: selecaoVotacao,
-    });
-    return this.mapear(votacao);
+  ): Promise<Votacao | null> {
+    try {
+      const votacao = await this.prisma.votacaoAtiva.create({
+        data: { playerId, grupoJid, sessaoId, expiraEm },
+        select: selecaoVotacao,
+      });
+      return this.mapear(votacao);
+    } catch (erro) {
+      if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002')
+        return null;
+      throw erro;
+    }
   }
 
   public async vincularEnquete(
@@ -48,13 +64,26 @@ export class RepositorioVotacaoPrisma implements RepositorioVotacao {
     });
   }
 
-  public async buscarAtivaPorGrupo(grupoJid: string, agora: Date): Promise<Votacao | null> {
+  public async buscarAtivaPorJogadorNaSessao(
+    playerId: string,
+    sessaoId: string,
+    agora: Date,
+  ): Promise<Votacao | null> {
     const votacao = await this.prisma.votacaoAtiva.findFirst({
-      where: { grupoJid, fechada: false, expiraEm: { gt: agora } },
+      where: { playerId, sessaoId, fechada: false, expiraEm: { gt: agora } },
       orderBy: { iniciadaEm: 'desc' },
       select: selecaoVotacao,
     });
     return votacao ? this.mapear(votacao) : null;
+  }
+
+  public async listarAtivasPorGrupo(grupoJid: string, agora: Date): Promise<Votacao[]> {
+    const votacoes = await this.prisma.votacaoAtiva.findMany({
+      where: { grupoJid, fechada: false, expiraEm: { gt: agora } },
+      orderBy: { iniciadaEm: 'desc' },
+      select: selecaoVotacao,
+    });
+    return votacoes.map((votacao) => this.mapear(votacao));
   }
 
   public async buscarPorMensagemEnquete(mensagemId: string): Promise<Votacao | null> {

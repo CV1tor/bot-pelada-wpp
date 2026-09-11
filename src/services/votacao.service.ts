@@ -24,7 +24,8 @@ export type ResultadoRegistroVoto =
 
 export type ResultadoEncerramentoVotacao =
   | { tipo: 'encerrada'; votacao: Votacao; resultado: ResultadoVotacao }
-  | { tipo: 'sem_votacao' };
+  | { tipo: 'sem_votacao' }
+  | { tipo: 'ambiguo'; nomes: string[] };
 
 const OPCOES_ENQUETE = ['1 ⭐', '2 ⭐', '3 ⭐', '4 ⭐', '5 ⭐'];
 const DURACAO_VOTACAO_EM_MILISSEGUNDOS = 3 * 24 * 60 * 60 * 1000;
@@ -42,8 +43,6 @@ export class VotacaoService {
   public async iniciar(nome: string, grupoJid: string): Promise<ResultadoInicioVotacao> {
     const sessao = await this.repositorioSessao.buscarAberta();
     if (!sessao) return { tipo: 'sem_sessao' };
-    const ativa = await this.repositorioVotacao.buscarAtivaPorGrupo(grupoJid, this.agora());
-    if (ativa) return { tipo: 'ja_existe', votacao: ativa };
 
     const resolucao = resolverJogadorPorNome(sessao.participantes, nome);
     if (resolucao.tipo === 'nao_encontrado') return { tipo: 'nao_encontrado' };
@@ -54,6 +53,13 @@ export class VotacaoService {
       };
     }
 
+    const ativa = await this.repositorioVotacao.buscarAtivaPorJogadorNaSessao(
+      resolucao.jogador.id,
+      sessao.id,
+      this.agora(),
+    );
+    if (ativa) return { tipo: 'ja_existe', votacao: ativa };
+
     const expiraEm = new Date(this.agora().getTime() + DURACAO_VOTACAO_EM_MILISSEGUNDOS);
     const votacao = await this.repositorioVotacao.criar(
       resolucao.jogador.id,
@@ -61,6 +67,15 @@ export class VotacaoService {
       sessao.id,
       expiraEm,
     );
+    if (!votacao) {
+      const criadaConcorrentemente = await this.repositorioVotacao.buscarAtivaPorJogadorNaSessao(
+        resolucao.jogador.id,
+        sessao.id,
+        this.agora(),
+      );
+      if (criadaConcorrentemente) return { tipo: 'ja_existe', votacao: criadaConcorrentemente };
+      throw new Error('Não foi possível recuperar a votação criada concorrentemente');
+    }
     try {
       const enquete = await this.clienteEvolution.enviarEnquete(
         grupoJid,
@@ -112,8 +127,23 @@ export class VotacaoService {
     return resultados;
   }
 
-  public async encerrarAtiva(grupoJid: string): Promise<ResultadoEncerramentoVotacao> {
-    const votacao = await this.repositorioVotacao.buscarAtivaPorGrupo(grupoJid, this.agora());
+  public async encerrarAtiva(
+    nome: string,
+    grupoJid: string,
+  ): Promise<ResultadoEncerramentoVotacao> {
+    const votacoes = await this.repositorioVotacao.listarAtivasPorGrupo(grupoJid, this.agora());
+    const resolucao = resolverJogadorPorNome(
+      votacoes.map(({ jogador }) => jogador),
+      nome,
+    );
+    if (resolucao.tipo === 'nao_encontrado') return { tipo: 'sem_votacao' };
+    if (resolucao.tipo === 'ambiguo') {
+      return {
+        tipo: 'ambiguo',
+        nomes: resolucao.jogadores.map(({ nome: nomeJogador }) => nomeJogador),
+      };
+    }
+    const votacao = votacoes.find(({ jogador }) => jogador.id === resolucao.jogador.id);
     if (!votacao) return { tipo: 'sem_votacao' };
     const encerramento = await this.fechar(votacao);
     return encerramento ? { tipo: 'encerrada', ...encerramento } : { tipo: 'sem_votacao' };
